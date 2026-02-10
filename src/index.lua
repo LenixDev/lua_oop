@@ -1,0 +1,9 @@
+-- constructor
+-- Extends
+-- public from all
+-- protected from the script only
+-- private from sub only
+-- set
+-- get
+-- accessor
+-- readonly

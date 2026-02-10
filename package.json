@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "dev": "npx nodemon --exec lua src/index.lua"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}
