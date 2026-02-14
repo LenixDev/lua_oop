@@ -34,15 +34,22 @@ local class<const> = function (fields)
   for _, pair in ipairs(fieldPairs) do
     local source, target = pair[1], pair[2]
     for variable, values in pairs(source) do
-      local value<const> = values[1]
-      local valueType<const> = values[3] or "any"
+      -- getPropertyValue
+      local value<const> = type(values) == "table" and values[1]
+      -- getPropertyType
+      local valueType<const> = type(values) == "table" and values[2] or "any"
       if isVariableEligible(variable, valueType, value) then
+      -- fill table with keys and values
         target[variable] = value
       end
     end
   end
 
-  local set<const> = function(variableValue, variableType, variableKey, field)
+  local set<const> = function(variableValue, isStatic, variableType, variableKey, field)
+    if not isStatic then
+      print(("property `%s` is not a `static` set or accessor property"):format(variableKey))
+      return
+    end
     if type(variableValue) ~= variableType and variableType ~= "any" then
       print(("cannot assign `%s` to `%s` on `%s`"):format(type(variableValue), variableType, variableKey))
       return
@@ -51,59 +58,76 @@ local class<const> = function (fields)
     getProperties[variableKey] = variableValue
   end
 
-  -- local constructor = fields.constructor or function() end
-  return setmetatable({}, {
-    __index = function(_, key)
-      if getter[key] ~= nil and getter[key][2] then
-        return getProperties[key]
-      elseif accessor[key] ~= nil then
-        return accessorProperties[key]
-      elseif private[key] ~= nil then
+  local isStatic<const> = function(field, variableKey)
+    if not field[variableKey][3] then
+      print(("property `%s` is not a `static` get or accessor property"):format(variableKey))
+      return false
+    else return true end
+  end
+
+  local instances = {}
+  local constructor = fields.constructor
+  return setmetatable({
+    new = function (self, ...)
+      return self
+    end
+  }, {
+    __index = function(_, variableKey)
+      assert(defined[variableKey], ("property `%s` not found"):format(variableKey))
+      -- isPropertyExist
+      if getter[variableKey] ~= nil then
+        if isStatic(getter, variableKey) then
+          -- returnPropertyValue
+          return getProperties[variableKey]
+        end
+      elseif accessor[variableKey] ~= nil then
+        if isStatic(accessor, variableKey) then
+          return accessorProperties[variableKey]
+        end
+      elseif private[variableKey] ~= nil then
         error("cannot read a private property")
-      elseif setter[key] ~= nil then
-        print("setter only property can not be accessed")
-      else
-        print(("property `%s` not found"):format(key))
-      end
+      elseif setter[variableKey] ~= nil then
+        print(("the setter only property `%s` can not be accessed"):format(variableKey))
+      else print(("something went wrong when trying to access `%s`"):format(variableKey)) end
     end,
     __newindex = function (t, variableKey, variableValue)
+      assert(defined[variableKey], ("property `%s` not found"):format(variableKey))
       if setter[variableKey] ~= nil then
-        set(variableValue, setter[variableKey][3] or "any", variableKey, setProperties)
+        set(variableValue, setter[variableKey] and setter[variableKey][3], setter[variableKey][2] or "any", variableKey, setProperties)
       elseif accessor[variableKey] ~= nil then
-        set(variableValue, accessor[variableKey][3] or "any", variableKey, accessorProperties)
+        set(variableValue, accessor[variableKey] and accessor[variableKey][3], accessor[variableKey][2] or "any", variableKey, accessorProperties)
       elseif getter[variableKey] ~= nil then
-        print("getter only property can not be set")
-      else
-        print(("property `%s` not found"):format(variableKey))
-      end
+        print(("the getter only property `%s `can not be set"):format(variableKey))
+      else print(("something went wrong when trying to access `%s`"):format(variableKey)) end
     end
   })
 end
 
-local myClass<const> = class({
+myClass = class({
   private = {
-    height = {197, true},
+    height = {197, "number"},
   },
   get = {
-    blood = {"O+", true, "string"},
+    blood = {false, "any"},
   },
   set = {
-    date = {2005, true},
+    date = {2026, "number"},
   },
   accessor = {
-    age = {20, true},
-    name = {"Dev", true},
+    age = {20, "number", true},
+    name = {"Dev", "string"},
   },
-  constructor = function(name, age)
+  constructor = function(self, super, name, age)
     self.name = name
-    self.age = age
+    myClass.age = age
   end
 })
 
-print(myClass.age)
-print(myClass.name)
-myClass.age = "21"
-myClass.name = "Lenix"
-myClass.date = "today"
-print(myClass.age)
-print(myClass.name)
+local Person = myClass:new("Lenix")
+print(Person.blood)
+Person.date = 2005
+print(Person.date)
+print(Person.age)
+Person.age = 21
+
+
