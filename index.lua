@@ -9,19 +9,19 @@ local class<const> = function (fields)
   local getProperties<const> = {}
   local accessorProperties<const> = {}
 
-  local isVariableDefined<const> = function (variable, valueType, value)
+  local isVariableEligible<const> = function (variable, valueType, value)
     if defined[variable] then
       print(("`%s` is already defined"):format(variable))
-      return true
-    elseif type(value) ~= valueType then
-      if valueType == "any" then
-        print(("variable `%s` implicitly has type `%s`"):format(variable, valueType, type(value)))
-      else
-        print(("type mismatch for `%s`, expected `%s`, got `%s`"):format(variable, valueType, type(value)))
-      end
-      return true
+      return
+    elseif type(value) ~= valueType and valueType ~= "any" then
+      print(("type mismatch for `%s`, expected `%s`, got `%s`"):format(variable, valueType, type(value)))
+      return
     end
     defined[variable] = true
+    if valueType == "any" then
+      print(("variable `%s` implicitly has type `%s`"):format(variable, valueType, type(value)))
+    end
+    return true
   end
 
   local fieldPairs<const> = {
@@ -36,7 +36,7 @@ local class<const> = function (fields)
     for variable, values in pairs(source) do
       local value<const> = values[1]
       local valueType<const> = values[3] or "any"
-      if not isVariableDefined(variable, valueType, value) then
+      if isVariableEligible(variable, valueType, value) then
         target[variable] = value
       end
     end
