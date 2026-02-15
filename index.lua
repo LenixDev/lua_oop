@@ -59,9 +59,10 @@ local class<const> = function (fields)
   local get<const> = function (self, propertyKey)
     if definedProperties[propertyKey] then
       if getter[propertyKey] then
-        return function()
-          return self[propertyKey](self)
+        if type(self[propertyKey]) == 'function' then
+          return function(...) return self[propertyKey](self, ...) end
         end
+        return self[propertyKey]
       elseif private[propertyKey] then
         print(("private property `%s` is not allowed to be accessed"):format(propertyKey))
       else print(("tried to get the `%s` set-only property"):format(propertyKey)) end
@@ -128,16 +129,12 @@ local myClass<const> = class({
     data = {'pass', "string"}
   },
   get = {
-    blood = {
-      function(self)
-        return self.data
-      end, "function"
-    },
+    blood = {'O+', "string"},
   },
   set = {
     date = {
-      function(self)
-        self.blood(self)
+      function(self, blood)
+        self.blood = blood
       end, "function"
     },
   },
@@ -146,7 +143,7 @@ local myClass<const> = class({
     age = {nil, "number"},
     getBlood = {
       function(self)
-        return self.height
+        return self.blood
       end, "function"
     }
   },
@@ -161,7 +158,7 @@ local myClass<const> = class({
 -- print(myClass.data)
 -- print(myClass.blood())
 local Class<const> = myClass:new("Lenix", 20, 197)
-print(Class.getBlood())
-print(Class.blood())
+print(Class.getBlood('g'))
+-- print(Class.blood)
 
 
