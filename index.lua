@@ -5,9 +5,9 @@ local class<const> = function (fields)
   local setter<const> = fields.set or {}
   local accessor<const> = fields.accessor or {}
   local privates<const> = {}
-  local setProperties<const> = {}
-  local getProperties<const> = {}
-  local accessorProperties<const> = {}
+  local setProperties<const> = { static = {} }
+  local getProperties<const> = { static = {} }
+  local accessorProperties<const> = { static = {} }
 
   local isVariableEligible<const> = function (variable, valueType, value)
     if defined[variable] then
@@ -38,18 +38,26 @@ local class<const> = function (fields)
       local value<const> = type(values) == "table" and values[1]
       -- getPropertyType
       local valueType<const> = type(values) == "table" and values[2] or "any"
+      local staticValue<const> = values and values[3] or false
       if isVariableEligible(variable, valueType, value) then
-      -- fill table with keys and values
-        target[variable] = value
+        -- fill table with keys and values
+        if staticValue then
+          target["static"][variable] = value
+        else
+          target[variable] = value
+        end
       end
     end
   end
 
-  local set<const> = function(variableValue, isStatic, variableType, variableKey, field)
-    if not isStatic then
-      print(("property `%s` is not a `static` set or accessor property"):format(variableKey))
-      return
-    end
+  local isStatic<const> = function(field, variableKey, accessorType)
+    if not field[variableKey][3] then
+      print(("property `%s` is not a `static` %s property"):format(variableKey, accessorType))
+      return false
+    else return true end
+  end
+
+  local set<const> = function(variableValue, variableType, variableKey, field)
     if type(variableValue) ~= variableType and variableType ~= "any" then
       print(("cannot assign `%s` to `%s` on `%s`"):format(type(variableValue), variableType, variableKey))
       return
@@ -58,17 +66,10 @@ local class<const> = function (fields)
     getProperties[variableKey] = variableValue
   end
 
-  local isStatic<const> = function(field, variableKey)
-    if not field[variableKey][3] then
-      print(("property `%s` is not a `static` get or accessor property"):format(variableKey))
-      return false
-    else return true end
-  end
-
-  local instances = {}
-  local constructor = fields.constructor
   return setmetatable({
     new = function (self, ...)
+      local constructor = fields.constructor
+      local instances = {}
       return self
     end
   }, {
@@ -76,13 +77,13 @@ local class<const> = function (fields)
       assert(defined[variableKey], ("property `%s` not found"):format(variableKey))
       -- isPropertyExist
       if getter[variableKey] ~= nil then
-        if isStatic(getter, variableKey) then
+        if isStatic(getter, variableKey, "get") then
           -- returnPropertyValue
-          return getProperties[variableKey]
+          return getProperties["static"][variableKey]
         end
       elseif accessor[variableKey] ~= nil then
-        if isStatic(accessor, variableKey) then
-          return accessorProperties[variableKey]
+        if isStatic(accessor, variableKey, "accessor") then
+          return accessorProperties["static"][variableKey]
         end
       elseif private[variableKey] ~= nil then
         error("cannot read a private property")
@@ -93,9 +94,13 @@ local class<const> = function (fields)
     __newindex = function (t, variableKey, variableValue)
       assert(defined[variableKey], ("property `%s` not found"):format(variableKey))
       if setter[variableKey] ~= nil then
-        set(variableValue, setter[variableKey] and setter[variableKey][3], setter[variableKey][2] or "any", variableKey, setProperties)
+        if setProperties["static"][variableKey] then
+          set(variableValue, setter[variableKey][2] or "any", variableKey, setProperties)
+        else isStatic(setter, variableKey, "set") return end
       elseif accessor[variableKey] ~= nil then
-        set(variableValue, accessor[variableKey] and accessor[variableKey][3], accessor[variableKey][2] or "any", variableKey, accessorProperties)
+        if accessorProperties["static"][variableKey] then
+          set(variableValue, accessor[variableKey][2] or "any", variableKey, accessorProperties)
+        else isStatic(accessor, variableKey, "accessor") return end
       elseif getter[variableKey] ~= nil then
         print(("the getter only property `%s `can not be set"):format(variableKey))
       else print(("something went wrong when trying to access `%s`"):format(variableKey)) end
@@ -123,11 +128,14 @@ myClass = class({
   end
 })
 
-local Person = myClass:new("Lenix")
-print(Person.blood)
-Person.date = 2005
-print(Person.date)
-print(Person.age)
-Person.age = 21
+print(myClass.age)
+
+-- local Person = myClass:new()
+-- print(Person.blood)
+-- Person.date = 2005
+-- print(Person.date)
+-- print(Person.age)
+-- Person.age = 21
+
 
 
