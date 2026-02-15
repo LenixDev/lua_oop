@@ -1,5 +1,16 @@
 assert(_VERSION == "Lua 5.4", "THIS MODULE REQUIRES Lua 5.4")
 
+local log<const> = function(...)
+  local args = {...}
+  for i, v in pairs(args) do
+    if type(v) == 'table' then
+      for k, j in pairs(v) do
+        print(("[%s]: [%s]: %s"):format(i, k, j))
+      end
+    end
+  end
+end
+
 local class<const> = function (fields)
   local defined<const> = {}
   local promisedToBeConstructed<const> = {}
@@ -62,7 +73,9 @@ local class<const> = function (fields)
     if defined[varKey] then
       if getter[varKey] then
         return self[varKey]
-      else print(("tried to get a set-only property: on `%s`"):format(varKey)) end
+      elseif private[varKey] then
+        print(("private property `%s` is not allowed to be accessed"):format(varKey))
+      else print(("tried to get the `%s` set-only property"):format(varKey)) end
     else
       print(("`%s` property does not exist"):format(varKey))
     end
@@ -73,7 +86,9 @@ local class<const> = function (fields)
         if type(varValue) == setter[varKey][2] or setter[varKey][2] == "any" then
           self[varKey] = varValue
         else print(("`%s` is not assignable to `%s`: on `%s`"):format(type(varValue), setter[varKey][2], varKey)) end
-      else print(("tried to set a get-only property: on `%s`"):format(varKey)) end
+      elseif private[varKey] then
+        print(("private property `%s` is not allowed to be assigned"):format(varKey))
+      else print(("tried to set the `%s` get-only property"):format(varKey)) end
     else
       print(("`%s` property does not exist"):format(varKey))
     end
@@ -94,7 +109,7 @@ local class<const> = function (fields)
       if fields.constructor then
         fields.constructor(instance, nil, ...)
       else error('no constructor was provided') end
-      
+
       -- Constructor has finished, now validate
       for varKey in pairs(promisedToBeConstructed) do
         if instance[varKey] == nil then
@@ -119,11 +134,7 @@ local myClass<const> = class({
     height = {197, "number"},
   },
   get = {
-    blood = {
-      function(self)
-        return self
-      end, "function"
-    },
+    blood = {function(self) return self end, "function"},
   },
   set = {
     date = {function(self) print(self) end, "function"},
@@ -138,14 +149,6 @@ local myClass<const> = class({
     self.age = age
   end
 })
-
-
-local Class<const> = myClass:new("Dev", 21)
-print('------------------')
-print(Class.height)
-Class.name = "Lenix"
-print(Class.name)
-local Classs<const> = myClass:new("Dev", 21)
 
 
 
