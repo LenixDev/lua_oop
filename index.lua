@@ -2,6 +2,7 @@ assert(_VERSION == "Lua 5.4", "THIS MODULE REQUIRES Lua 5.4")
 
 local class<const> = function (fields)
   local defined<const> = {}
+  local promisedToBeConstructed<const> = {}
   local private<const> = fields.private or {}
   local getter<const> = fields.get or {}
   local setter<const> = fields.set or {}
@@ -14,13 +15,16 @@ local class<const> = function (fields)
     if defined[variable] then
       print(("`%s` is already defined"):format(variable))
       return
-    elseif type(value) ~= valueType and valueType ~= "any" then
-      print(("type mismatch for `%s`, expected `%s`, got `%s`"):format(variable, valueType, type(value)))
+    elseif type(value) ~= valueType and valueType ~= "any" and value ~= nil then
+      error(("type mismatch for `%s`, defined `%s`, appointed `%s`"):format(variable, valueType, type(value)))
       return
     end
     defined[variable] = true
     if valueType == "any" then
       print(("variable `%s` implicitly has type `%s`"):format(variable, valueType, type(value)))
+    end
+    if value == nil and valueType ~= "nil" then
+      promisedToBeConstructed[variable] = true
     end
     return true
   end
@@ -33,12 +37,12 @@ local class<const> = function (fields)
   }
 
   for _, pair in ipairs(fieldPairs) do
-    local field, properties = pair[1], pair[2]
+    local field<const>, properties<const> = pair[1], pair[2]
     for variable, values in pairs(field) do
       -- getPropertyValue
       local value<const> = type(values) == "table" and values[1]
       -- getPropertyType
-      local valueType<const> = type(values) == "table" and values[2] or "any"
+      local valueType<const> = values[2]
       if isVariableEligible(variable, valueType, value) then
         -- fill table with keys and values
         if properties then
@@ -47,14 +51,37 @@ local class<const> = function (fields)
           -- for the accessor, filling the get and set permission
           getProperties[variable] = value
           setProperties[variable] = value
+          setter[variable] = accessor[variable]
+          getter[variable] = accessor[variable]
         end
       end
     end
   end
 
+  local get<const> = function (self, varKey)
+    if defined[varKey] then
+      if getter[varKey] then
+        return self[varKey]
+      else print(("tried to get a set-only property: on `%s`"):format(varKey)) end
+    else
+      print(("`%s` property does not exist"):format(varKey))
+    end
+  end
+  local set<const> = function (self, varKey, varValue)
+    if defined[varKey] then
+      if setter[varKey] then
+        if type(varValue) == setter[varKey][2] or setter[varKey][2] == "any" then
+          self[varKey] = varValue
+        else print(("`%s` is not assignable to `%s`: on `%s`"):format(type(varValue), setter[varKey][2], varKey)) end
+      else print(("tried to set a get-only property: on `%s`"):format(varKey)) end
+    else
+      print(("`%s` property does not exist"):format(varKey))
+    end
+  end
+
   return setmetatable({
     new = function(self, ...)
-      local instance = {}
+      local instance<const> = {}
 
       for _, pair in pairs(fieldPairs) do
         for varKey, varValue in pairs(pair[2] or {}) do
@@ -64,14 +91,23 @@ local class<const> = function (fields)
 
       setmetatable(instance, getmetatable(self))
 
-      fields.constructor(instance, nil, ...)
-
+      if fields.constructor then
+        fields.constructor(instance, nil, ...)
+      else error('no constructor was provided') end
+      
+      -- Constructor has finished, now validate
+      for varKey in pairs(promisedToBeConstructed) do
+        if instance[varKey] == nil then
+          error(('the `%s` was not instantiated in constructor as promised'):format(varKey))
+        end
+      end
+      
       return setmetatable({}, {
         __index = function(_, varKey)
-          return instance[varKey]
+          return get(instance, varKey)
         end,
         __newindex = function(_, varKey, varValue)
-          
+          set(instance, varKey, varValue)
         end
       })
     end
@@ -83,14 +119,18 @@ local myClass<const> = class({
     height = {197, "number"},
   },
   get = {
-    blood = {"O+", "string"},
+    blood = {
+      function(self)
+        return self
+      end, "function"
+    },
   },
   set = {
-    date = {2005, "number"},
+    date = {function(self) print(self) end, "function"},
   },
   accessor = {
-    age = {20, "number"},
-    name = {"Lenix", "string"},
+    name = {nil, "string"},
+    age = {nil, "number"},
     getBlood = {function(self) return self end, "function"}
   },
   constructor = function(self, super, name, age)
@@ -100,11 +140,13 @@ local myClass<const> = class({
 })
 
 
-local Person<const> = myClass:new("Dev", 21)
+local Class<const> = myClass:new("Dev", 21)
 print('------------------')
-print(Person.blood)
-print(Person.age)
-Person.blood = "O-"
-Person.age = 20
-print(Person.blood)
-print(Person.age)
+print(Class.height)
+Class.name = "Lenix"
+print(Class.name)
+local Classs<const> = myClass:new("Dev", 21)
+
+
+
+
