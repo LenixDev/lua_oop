@@ -105,7 +105,7 @@ local class<const> = function (fields)
           error(('the `%s` was not instantiated in constructor as promised'):format(propertyKey))
         end
       end
-      
+
       return setmetatable({}, {
         __index = function(_, propertyKey)
           return get(instance, propertyKey)
@@ -116,8 +116,8 @@ local class<const> = function (fields)
       })
     end
   }, {
-    __newindex = function(_, propertyKey)
-      
+    __index = function(self, propertyKey)
+      return get(self, propertyKey)
     end
   })
 end
@@ -131,16 +131,14 @@ local myClass<const> = class({
     blood = {
       function(self)
         return self.data
-      end,
-      "function"
+      end, "function"
     },
   },
   set = {
     date = {
       function(self)
         self.blood(self)
-      end,
-      "function"
+      end, "function"
     },
   },
   accessor = {
@@ -149,8 +147,7 @@ local myClass<const> = class({
     getBlood = {
       function(self)
         return self.blood()
-      end,
-      "function"
+      end, "function"
     }
   },
   constructor = function(self, super, name, age, height)
@@ -161,9 +158,9 @@ local myClass<const> = class({
 })
 
 
-print(myClass.getBlood())
-print(myClass.blood())
-local Class<const> = myClass:new("Lenix", 20, 197)
+print(myClass.data)
+-- print(myClass.blood())
+-- local Class<const> = myClass:new("Lenix", 20, 197)
 
 
 
