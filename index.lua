@@ -75,10 +75,10 @@ local class<const> = function (fields)
       end
       return setmetatable({}, {
         __index = function (_, variableKey)
-          if getProperties["instance"][variableKey] then
+          if getter["instance"][variableKey] then
             return getProperties["instance"][variableKey]
-          elseif accessorProperties["instance"][variableKey] then
-            return accessorProperties["instance"][variableKey]
+          elseif accessor["instance"][variableKey] then
+            return getProperties["instance"][variableKey]
           end
         end,
       })
@@ -131,18 +131,18 @@ end
 
 myClass = class({
   private = {
-    height = {197, "number", true},
+    height = {197, "number"},
   },
   get = {
-    blood = {"O+", "any", true},
+    blood = {"O+", "any"},
   },
   set = {
-    date = {2005, "number", true},
+    date = {2005, "number"},
   },
   accessor = {
-    age = {20, "number", true},
-    name = {"Lenix", "string", true},
-    getBlood = {function() return myClass.blood end, "function", true}
+    age = {20, "number"},
+    name = {"Lenix", "string"},
+    getBlood = {function(self) return self end, "function"}
   },
   constructor = function(self, super, name, age)
     self.name = name
@@ -151,25 +151,26 @@ myClass = class({
 })
 
 
-
-print(myClass.height)
-print(myClass.blood)
-myClass.date = 2026
-print(myClass.age)
-myClass.age = 21
-print(myClass.age)
-print(myClass.name)
-myClass.name = "Dev"
-print(myClass.name)
-print(myClass.getBlood())
-myClass.getBlood = function() return true end
-
--- local Person = myClass:new()
+local Person = myClass:new()
 -- print(Person.blood)
 -- Person.date = 2005
 -- print(Person.date)
 -- print(Person.age)
 -- Person.age = 21
+
+-- print(myClass.height)
+-- print(myClass.blood)
+-- myClass.date = 2026
+-- print(myClass.age)
+-- myClass.age = 21
+-- print(myClass.age)
+-- print(myClass.name)
+-- myClass.name = "Dev"
+-- print(myClass.name)
+-- print(myClass.getBlood())
+-- myClass.getBlood = function() return true end
+-- print(myClass.getBlood())
+
 
 
 
