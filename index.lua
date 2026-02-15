@@ -4,10 +4,10 @@ local class<const> = function (fields)
   local getter<const> = fields.get or {}
   local setter<const> = fields.set or {}
   local accessor<const> = fields.accessor or {}
-  local privates<const> = {}
-  local setProperties<const> = { static = {} }
-  local getProperties<const> = { static = {} }
-  local accessorProperties<const> = { static = {} }
+  local privates<const> = { static = {}, instance = {} }
+  local setProperties<const> = { static = {}, instance = {} }
+  local getProperties<const> = { static = {}, instance = {} }
+  local accessorProperties<const> = { static = {}, instance = {} }
 
   local isVariableEligible<const> = function (variable, valueType, value)
     if defined[variable] then
@@ -44,7 +44,7 @@ local class<const> = function (fields)
         if staticValue then
           target["static"][variable] = value
         else
-          target[variable] = value
+          target["instance"][variable] = value
         end
       end
     end
@@ -62,14 +62,17 @@ local class<const> = function (fields)
       print(("cannot assign `%s` to `%s` on `%s`"):format(type(variableValue), variableType, variableKey))
       return
     end
-    field[variableKey] = variableValue
-    getProperties[variableKey] = variableValue
+    field["static"][variableKey] = variableValue
+    getProperties["static"][variableKey] = variableValue
   end
 
   return setmetatable({
     new = function (self, ...)
       local constructor = fields.constructor
       local instances = {}
+      for key, value in pairs(setProperties) do
+        print(key)
+      end
       return self
     end
   }, {
@@ -86,7 +89,7 @@ local class<const> = function (fields)
           return accessorProperties["static"][variableKey]
         end
       elseif private[variableKey] ~= nil then
-        error("cannot read a private property")
+        print(("cannot read the private property `%s`"):format(variableKey))
       elseif setter[variableKey] ~= nil then
         print(("the setter only property `%s` can not be accessed"):format(variableKey))
       else print(("something went wrong when trying to access `%s`"):format(variableKey)) end
@@ -110,17 +113,18 @@ end
 
 myClass = class({
   private = {
-    height = {197, "number"},
+    height = {197, "number", true},
   },
   get = {
-    blood = {false, "any"},
+    blood = {"O+", "any", true},
   },
   set = {
-    date = {2026, "number"},
+    date = {2005, "number", true},
   },
   accessor = {
     age = {20, "number", true},
-    name = {"Dev", "string"},
+    name = {"Lenix", "string", true},
+    getBlood = {function() return myClass.blood end, "function", true}
   },
   constructor = function(self, super, name, age)
     self.name = name
@@ -128,9 +132,9 @@ myClass = class({
   end
 })
 
-print(myClass.age)
 
--- local Person = myClass:new()
+
+local Person = myClass:new()
 -- print(Person.blood)
 -- Person.date = 2005
 -- print(Person.date)
