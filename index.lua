@@ -49,10 +49,8 @@ local class<const> = function (fields)
           properties[propertyKey] = propertyValue
         else
           -- for the accessor, filling the get and set permission
-          getProperties[propertyKey] = propertyValue
-          setProperties[propertyKey] = propertyValue
-          setter[propertyKey] = accessor[propertyKey]
-          getter[propertyKey] = accessor[propertyKey]
+          getProperties[propertyKey], setProperties[propertyKey] = propertyValue, propertyValue
+          setter[propertyKey], getter[propertyKey] = accessor[propertyKey], accessor[propertyKey]
         end
       end
     end
@@ -61,7 +59,9 @@ local class<const> = function (fields)
   local get<const> = function (self, propertyKey)
     if definedProperties[propertyKey] then
       if getter[propertyKey] then
-        return self[propertyKey]
+        return function()
+          return self[propertyKey](self)
+        end
       elseif private[propertyKey] then
         print(("private property `%s` is not allowed to be accessed"):format(propertyKey))
       else print(("tried to get the `%s` set-only property"):format(propertyKey)) end
@@ -146,7 +146,7 @@ local myClass<const> = class({
     age = {nil, "number"},
     getBlood = {
       function(self)
-        return self.blood()
+        return self.height
       end, "function"
     }
   },
@@ -158,9 +158,10 @@ local myClass<const> = class({
 })
 
 
-print(myClass.data)
+-- print(myClass.data)
 -- print(myClass.blood())
--- local Class<const> = myClass:new("Lenix", 20, 197)
-
+local Class<const> = myClass:new("Lenix", 20, 197)
+print(Class.getBlood())
+print(Class.blood())
 
 
