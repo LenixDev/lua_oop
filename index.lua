@@ -57,8 +57,7 @@ local class<const> = function (fields)
       local instance = {}
 
       for _, pair in pairs(fieldPairs) do
-        local field, _ = pair[1], pair[2]
-        for varKey, varValue in pairs(field) do
+        for varKey, varValue in pairs(pair[2] or {}) do
           instance[varKey] = varValue
         end
       end
@@ -67,7 +66,14 @@ local class<const> = function (fields)
 
       fields.constructor(instance, nil, ...)
 
-      return instance
+      return setmetatable({}, {
+        __index = function(_, varKey)
+          return instance[varKey]
+        end,
+        __newindex = function(_, varKey, varValue)
+          
+        end
+      })
     end
   }, {})
 end
@@ -96,6 +102,9 @@ local myClass<const> = class({
 
 local Person<const> = myClass:new("Dev", 21)
 print('------------------')
-print(Person.name, Person.blood)
-Person.blood = "O-"
 print(Person.blood)
+print(Person.age)
+Person.blood = "O-"
+Person.age = 20
+print(Person.blood)
+print(Person.age)
