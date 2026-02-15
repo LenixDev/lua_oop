@@ -42,6 +42,7 @@ local class<const> = function (fields)
       -- getPropertyValue
       local propertyValue<const> = type(propertyValues) == "table" and propertyValues[1]
       -- getPropertyType
+      assert(type(propertyValues) == 'table', ("syntax error at `%s`, expected `%s`, got `%s`"):format(propertyKey, "table", type(propertyValues)))
       local propertyType<const> = propertyValues[2]
       if isVariableEligible(propertyKey, propertyType, propertyValue) then
         -- fill table with keys and values
@@ -116,49 +117,50 @@ local class<const> = function (fields)
         end
       })
     end
-  }, {
-    __index = function(self, propertyKey)
-      return get(self, propertyKey)
-    end
-  })
+  }, { })
 end
 
 local myClass<const> = class({
   private = {
     height = {nil, "number"},
-    data = {'pass', "string"}
   },
   get = {
-    blood = {'O+', "string"},
+    blood = {nil, "string"},
+    getHeight = {function(self, new)
+      self.setHeight(self, new)
+      return self.height
+    end, "function"}
   },
   set = {
-    date = {
-      function(self, blood)
-        self.blood = blood
+    setHeight = {
+      function(self, new)
+        self.height = new
       end, "function"
     },
   },
   accessor = {
     name = {nil, "string"},
     age = {nil, "number"},
-    getBlood = {
-      function(self)
-        return self.blood
-      end, "function"
-    }
   },
-  constructor = function(self, super, name, age, height)
+  constructor = function(self, super, name, age, height, blood)
     self.name = name
     self.age = age
     self.height = height
+    self.blood = blood
   end
 })
 
 
--- print(myClass.data)
--- print(myClass.blood())
-local Class<const> = myClass:new("Lenix", 20, 197)
-print(Class.getBlood('g'))
--- print(Class.blood)
+local Class<const> = myClass:new("Lenix", 20, 197, "O+")
+Class.setHeight = function(self, new)
+  self.height = new
+end
+
+
+
+print(Class.getHeight(198))
+
+
+
 
 
