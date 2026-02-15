@@ -70,9 +70,7 @@ local class<const> = function (fields)
     new = function (self, ...)
       local constructor = fields.constructor
       local instances = {}
-      for key, value in pairs(setProperties) do
-        print(key)
-      end
+      constructor(self, nil, ...)
       return setmetatable({}, {
         __index = function (_, variableKey)
           if getter["instance"][variableKey] then
@@ -151,8 +149,8 @@ myClass = class({
 })
 
 
-local Person = myClass:new()
--- print(Person.blood)
+local Person = myClass:new("Dev", 21)
+print(Person.name, Person.age)
 -- Person.date = 2005
 -- print(Person.date)
 -- print(Person.age)
