@@ -1,3 +1,5 @@
+assert(_VERSION == "Lua 5.4", "THIS MODULE REQUIRES Lua 5.4")
+
 local class<const> = function (fields)
   local defined<const> = {}
   local private<const> = fields.private or {}
@@ -31,18 +33,18 @@ local class<const> = function (fields)
   }
 
   for _, pair in ipairs(fieldPairs) do
-    local source, target = pair[1], pair[2]
-    for variable, values in pairs(source) do
+    local field, properties = pair[1], pair[2]
+    for variable, values in pairs(field) do
       -- getPropertyValue
       local value<const> = type(values) == "table" and values[1]
       -- getPropertyType
       local valueType<const> = type(values) == "table" and values[2] or "any"
       if isVariableEligible(variable, valueType, value) then
         -- fill table with keys and values
-        if target then
-          target[variable] = value
+        if properties then
+          properties[variable] = value
         else
-          -- for the accessor, get and set permission
+          -- for the accessor, filling the get and set permission
           getProperties[variable] = value
           setProperties[variable] = value
         end
@@ -54,11 +56,10 @@ local class<const> = function (fields)
     new = function(self, ...)
       local instance = {}
 
-      for _, fields in pairs(fieldPairs) do
-        for _, field in pairs(fields) do
-          for varKey, varValue in pairs(field) do
-            instance[varKey] = varValue
-          end
+      for _, pair in pairs(fieldPairs) do
+        local field, _ = pair[1], pair[2]
+        for varKey, varValue in pairs(field) do
+          instance[varKey] = varValue
         end
       end
 
@@ -92,29 +93,9 @@ local myClass<const> = class({
   end
 })
 
+
 local Person<const> = myClass:new("Dev", 21)
 print('------------------')
 print(Person.name, Person.blood)
-local Person1 = myClass:new("Lenix", 44)
-print(Person1.name, Person.name)
--- Person.date = 2005
--- print(Person.date)
--- print(Person.age)
--- Person.age = 21
-
--- print(myClass.height)
--- print(myClass.blood)
--- myClass.date = 2026
--- print(myClass.age)
--- myClass.age = 21
--- print(myClass.age)
--- print(myClass.name)
--- myClass.name = "Dev"
--- print(myClass.name)
--- print(myClass.getBlood())
--- myClass.getBlood = function() return true end
--- print(myClass.getBlood())
-
-
-
-
+Person.blood = "O-"
+print(Person.blood)
