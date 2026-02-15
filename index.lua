@@ -1,18 +1,7 @@
 assert(_VERSION == "Lua 5.4", "THIS MODULE REQUIRES Lua 5.4")
 
-local log<const> = function(...)
-  local args = {...}
-  for i, v in pairs(args) do
-    if type(v) == 'table' then
-      for k, j in pairs(v) do
-        print(("[%s]: [%s]: %s"):format(i, k, j))
-      end
-    end
-  end
-end
-
 local class<const> = function (fields)
-  local defined<const> = {}
+  local definedProperties<const> = {}
   local promisedToBeConstructed<const> = {}
   local private<const> = fields.private or {}
   local getter<const> = fields.get or {}
@@ -22,20 +11,20 @@ local class<const> = function (fields)
   local setProperties<const> = {}
   local getProperties<const> = {}
 
-  local isVariableEligible<const> = function (variable, valueType, value)
-    if defined[variable] then
-      print(("`%s` is already defined"):format(variable))
+  local isVariableEligible<const> = function (propertyKey, propertyType, propertyValue)
+    if definedProperties[propertyKey] then
+      print(("`%s` is already defined"):format(propertyKey))
       return
-    elseif type(value) ~= valueType and valueType ~= "any" and value ~= nil then
-      error(("type mismatch for `%s`, defined `%s`, appointed `%s`"):format(variable, valueType, type(value)))
+    elseif type(propertyValue) ~= propertyType and propertyType ~= "any" and propertyValue ~= nil then
+      error(("type mismatch for `%s`, defined `%s`, appointed `%s`"):format(propertyKey, propertyType, type(propertyValue)))
       return
     end
-    defined[variable] = true
-    if valueType == "any" then
-      print(("variable `%s` implicitly has type `%s`"):format(variable, valueType, type(value)))
+    definedProperties[propertyKey] = true
+    if propertyType == "any" then
+      print(("variable `%s` implicitly has type `%s`"):format(propertyKey, propertyType, type(propertyValue)))
     end
-    if value == nil and valueType ~= "nil" then
-      promisedToBeConstructed[variable] = true
+    if propertyValue == nil and propertyType ~= "nil" then
+      promisedToBeConstructed[propertyKey] = true
     end
     return true
   end
@@ -49,48 +38,48 @@ local class<const> = function (fields)
 
   for _, pair in ipairs(fieldPairs) do
     local field<const>, properties<const> = pair[1], pair[2]
-    for variable, values in pairs(field) do
+    for propertyKey, propertyValues in pairs(field) do
       -- getPropertyValue
-      local value<const> = type(values) == "table" and values[1]
+      local propertyValue<const> = type(propertyValues) == "table" and propertyValues[1]
       -- getPropertyType
-      local valueType<const> = values[2]
-      if isVariableEligible(variable, valueType, value) then
+      local propertyType<const> = propertyValues[2]
+      if isVariableEligible(propertyKey, propertyType, propertyValue) then
         -- fill table with keys and values
         if properties then
-          properties[variable] = value
+          properties[propertyKey] = propertyValue
         else
           -- for the accessor, filling the get and set permission
-          getProperties[variable] = value
-          setProperties[variable] = value
-          setter[variable] = accessor[variable]
-          getter[variable] = accessor[variable]
+          getProperties[propertyKey] = propertyValue
+          setProperties[propertyKey] = propertyValue
+          setter[propertyKey] = accessor[propertyKey]
+          getter[propertyKey] = accessor[propertyKey]
         end
       end
     end
   end
 
-  local get<const> = function (self, varKey)
-    if defined[varKey] then
-      if getter[varKey] then
-        return self[varKey]
-      elseif private[varKey] then
-        print(("private property `%s` is not allowed to be accessed"):format(varKey))
-      else print(("tried to get the `%s` set-only property"):format(varKey)) end
+  local get<const> = function (self, propertyKey)
+    if definedProperties[propertyKey] then
+      if getter[propertyKey] then
+        return self[propertyKey]
+      elseif private[propertyKey] then
+        print(("private property `%s` is not allowed to be accessed"):format(propertyKey))
+      else print(("tried to get the `%s` set-only property"):format(propertyKey)) end
     else
-      print(("`%s` property does not exist"):format(varKey))
+      print(("`%s` property does not exist"):format(propertyKey))
     end
   end
-  local set<const> = function (self, varKey, varValue)
-    if defined[varKey] then
-      if setter[varKey] then
-        if type(varValue) == setter[varKey][2] or setter[varKey][2] == "any" then
-          self[varKey] = varValue
-        else print(("`%s` is not assignable to `%s`: on `%s`"):format(type(varValue), setter[varKey][2], varKey)) end
-      elseif private[varKey] then
-        print(("private property `%s` is not allowed to be assigned"):format(varKey))
-      else print(("tried to set the `%s` get-only property"):format(varKey)) end
+  local set<const> = function (self, propertyKey, propertyValue)
+    if definedProperties[propertyKey] then
+      if setter[propertyKey] then
+        if type(propertyValue) == setter[propertyKey][2] or setter[propertyKey][2] == "any" then
+          self[propertyKey] = propertyValue
+        else print(("`%s` is not assignable to `%s`: on `%s`"):format(type(propertyValue), setter[propertyKey][2], propertyKey)) end
+      elseif private[propertyKey] then
+        print(("private property `%s` is not allowed to be assigned"):format(propertyKey))
+      else print(("tried to set the `%s` get-only property"):format(propertyKey)) end
     else
-      print(("`%s` property does not exist"):format(varKey))
+      print(("`%s` property does not exist"):format(propertyKey))
     end
   end
 
@@ -99,8 +88,8 @@ local class<const> = function (fields)
       local instance<const> = {}
 
       for _, pair in pairs(fieldPairs) do
-        for varKey, varValue in pairs(pair[2] or {}) do
-          instance[varKey] = varValue
+        for propertyKey, propertyValue in pairs(pair[2] or {}) do
+          instance[propertyKey] = propertyValue
         end
       end
 
@@ -111,45 +100,70 @@ local class<const> = function (fields)
       else error('no constructor was provided') end
 
       -- Constructor has finished, now validate
-      for varKey in pairs(promisedToBeConstructed) do
-        if instance[varKey] == nil then
-          error(('the `%s` was not instantiated in constructor as promised'):format(varKey))
+      for propertyKey in pairs(promisedToBeConstructed) do
+        if instance[propertyKey] == nil then
+          error(('the `%s` was not instantiated in constructor as promised'):format(propertyKey))
         end
       end
       
       return setmetatable({}, {
-        __index = function(_, varKey)
-          return get(instance, varKey)
+        __index = function(_, propertyKey)
+          return get(instance, propertyKey)
         end,
-        __newindex = function(_, varKey, varValue)
-          set(instance, varKey, varValue)
+        __newindex = function(_, propertyKey, varValue)
+          set(instance, propertyKey, varValue)
         end
       })
     end
-  }, {})
+  }, {
+    __newindex = function(_, propertyKey)
+      
+    end
+  })
 end
 
 local myClass<const> = class({
   private = {
-    height = {197, "number"},
+    height = {nil, "number"},
+    data = {'pass', "string"}
   },
   get = {
-    blood = {function(self) return self end, "function"},
+    blood = {
+      function(self)
+        return self.data
+      end,
+      "function"
+    },
   },
   set = {
-    date = {function(self) print(self) end, "function"},
+    date = {
+      function(self)
+        self.blood(self)
+      end,
+      "function"
+    },
   },
   accessor = {
     name = {nil, "string"},
     age = {nil, "number"},
-    getBlood = {function(self) return self end, "function"}
+    getBlood = {
+      function(self)
+        return self.blood()
+      end,
+      "function"
+    }
   },
-  constructor = function(self, super, name, age)
+  constructor = function(self, super, name, age, height)
     self.name = name
     self.age = age
+    self.height = height
   end
 })
 
+
+print(myClass.getBlood())
+print(myClass.blood())
+local Class<const> = myClass:new("Lenix", 20, 197)
 
 
 
