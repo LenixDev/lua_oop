@@ -1,79 +1,90 @@
 assert(_VERSION == "Lua 5.4", "THIS MODULE REQUIRES Lua 5.4")
 
-local class<const> = function (members)
-  local properties<const> = {}
-  local propertiesValues<const> = {}
+local class<const> = function (Members)
+  local members<const> = {}
+  local membersValues<const> = {}
 
   -- initialize
-  for varKey in pairs(members) do
-    if varKey ~= "constructor" then
-      properties[varKey] = {}
-      if type(members[varKey]) == 'table' then
-        propertiesValues[varKey] = members[varKey][1] ~= nil and members[varKey][1] or nil
-        properties[varKey] = {
-          isPrivate = members[varKey][2] == nil and true or members[varKey][2],
-          isStatic = members[varKey][3] == nil and false or members[varKey][3] or false,
-          isConst = members[varKey][4] == nil and false or members[varKey][4] or true,
+  for memberKey in pairs(Members) do
+    if memberKey ~= "constructor" then
+      members[memberKey] = {}
+      if type(Members[memberKey]) == 'table' then
+        membersValues[memberKey] = Members[memberKey][1] ~= nil and Members[memberKey][1] or nil
+        members[memberKey] = {
+          isPrivate = Members[memberKey][2] == nil and true or Members[memberKey][2],
+          isStatic = Members[memberKey][3] == nil and false or Members[memberKey][3] or false,
+          isConst = Members[memberKey][4] == nil and false or Members[memberKey][4] or true,
         }
       else
-        propertiesValues[varKey] = members[varKey]
-        properties[varKey] = {
+        membersValues[memberKey] = Members[memberKey]
+        members[memberKey] = {
           isPrivate = true,
           isStatic = false,
           isConst =  true,
         }
       end
-    elseif type(members[varKey]) ~= "function" then error("syntax error: constructor is not a function") end
+    elseif type(Members[memberKey]) ~= "function" then error("syntax error: constructor is not a function") end
   end
 
   return setmetatable({
     new = function(self, ...)
       local instance<const> = {}
-      for propertyKey, property in pairs(properties) do
-        if not property.isStatic then
-          instance[propertyKey] = propertiesValues[propertyKey]
+      for memberKey, member in pairs(members) do
+        if not member.isStatic then
+          instance[memberKey] = membersValues[memberKey]
         end
       end
 
-      if members.constructor then
-        members.constructor(instance, nil, ...)
+      if Members.constructor then
+        Members.constructor(instance, nil, ...)
       else error('no constructor was provided') end
 
-      for propertyKey in pairs(properties) do
-        if not instance[propertyKey] then
-          print(('the `%s` was not instantiated in constructor'):format(propertyKey))
+      for memberKey in pairs(members) do
+        if not instance[memberKey] then
+          print(('the `%s` was not instantiated in constructor'):format(memberKey))
         end
       end
       
+      return setmetatable({}, {
+        __index = function(_, memberKey)
+          local member<const> = members[memberKey]
+          assert(not member.isPrivate, ("`%s` member is private"):format(memberKey))
+          assert(member.isStatic, ("`%s` member is static"):format(memberKey))
+          return instance[memberKey]
+        end,
+        __newindex = function(_, memberKey, memberKeyValue)
+          instance[memberKey] = memberKeyValue
+        end
+      })
     end
   }, {
     __metatable = false,
-    __index = function(self, varKey)
-      local property<const> = properties[varKey]
-      assert(not property.isPrivate, ("`%s` property is private"):format(varKey))
-      assert(property.isStatic, ("`%s` property is not static"):format(varKey))
-      local value = propertiesValues[varKey]
+    __index = function(self, memberKey)
+      local member<const> = members[memberKey]
+      assert(not member.isPrivate, ("`%s` member is private"):format(memberKey))
+      assert(member.isStatic, ("`%s` member is not static"):format(memberKey))
+      local value = membersValues[memberKey]
 
       if type(value) == "function" then
         return function(_, ...)
-          return value(propertiesValues, ...)
+          return value(membersValues, ...)
         end
       end
 
       return value
     end,
-    __newindex = function(_, varKey, varValue)
-      local property<const> = properties[varKey]
-      assert(not property.isPrivate, ("`%s` property is private"):format(varKey))
-      assert(property.isStatic, ("`%s` property is not static"):format(varKey))
-      assert(not property.isConst, ("`%s` property is constant"):format(varKey))
-      propertiesValues[varKey] = varValue
+    __newindex = function(_, memberKey, memberKeyValue)
+      local member<const> = members[memberKey]
+      assert(not member.isPrivate, ("`%s` member is private"):format(memberKey))
+      assert(member.isStatic, ("`%s` member is not static"):format(memberKey))
+      assert(not member.isConst, ("`%s` member is constant"):format(memberKey))
+      membersValues[memberKey] = memberKeyValue
     end
   })
 end
 
 local myClass<const> = class({
-  name = "Lenix",
+  name = {"Lenix"},
   height = {nil},
   age = 20,
   getHeight = {
@@ -101,7 +112,7 @@ local myClass<const> = class({
 })
 
 local Class<const> = myClass:new("Lenix", 20, 197, "O+")
--- print(Class.name)
+print(Class.name)
 -- local Class<const> = myClass:new("Lenix", 20, 197, "O+")
 -- Class.setHeight = function(self, new)
 --   self.height = new
