@@ -43,12 +43,11 @@ local class<const> = function (Members)
       else error('no constructor was provided') end
 
       for memberKey in pairs(members) do
-        if not instance[memberKey] then
+        if not instance[memberKey] and not members[memberKey].isStatic then
           print(('the `%s` was not instantiated in constructor'):format(memberKey))
         end
       end
       
-
       return setmetatable({}, {
         __index = function(_, memberKey)
           local member<const> = members[memberKey]
@@ -98,40 +97,27 @@ local myClass<const> = class({
   getHeight = {
     function(self)
       return self.height
-    end
+    end, false, true
   },
   setHeight = {
     function(self, height)
       self.height = height
       return true, "set successful"
-    end
+    end, false, true
   },
   --[[ reserved for later uses ]]
   -- get = {},
   -- set = {},
   -- accessor = {},
   -- override = {},
-  constructor = function(self, super, name, age, height, blood)
+  constructor = function(self, super, name, age, height)
     self.name = name
     self.age = age
     self.height = height
-    self.blood = blood
   end
 })
 
 local Class<const> = myClass:new("Lenix", 20, 197)
--- print(Class.name)
--- Class.name = "Dev"
--- print(Class.name)
--- local Class<const> = myClass:new("Lenix", 20, 197, "O+")
--- Class.setHeight = function(self, new)
---   self.height = new
--- end
-
-
-
--- print(Class.getHeight(198))
-
 
 
 
