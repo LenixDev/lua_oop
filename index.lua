@@ -7,18 +7,27 @@ local class<const> = function (Members)
     if existingValue ~= nil then return existingValue else return defaultValue end
   end
   local getters<const> = {}
+  local setters<const> = {}
 
   -- initialize
   for memberKey, member in pairs(Members) do
     if memberKey == "constructor" then
-      if type(member) ~= "function" then error(("syntax error: constructor expected `%s`, got `%s`"):format("function", type(member))) end
+      if type(member) ~= "function" then error(("syntax error: constructor expected `function`, got `%s`"):format(type(member))) end
     elseif memberKey == "get" then
-      if type(member) ~= "table" then error(("syntax error: get expected `%s`, got `%s`"):format("table", type(member))) end
+      if type(member) ~= "table" then error(("syntax error: get expected `table`, got `%s`"):format(type(member))) end
       for getterKey, getter in pairs(member) do
-        if type(getter) ~= "function" then error(("syntax error: the getters(`%s`) can be only a `%s`, got `%s`"):format(getterKey, "function", type(getter))) end
+        if type(getter) ~= "function" then error(("syntax error: the getters(`%s`) can be only a `function`, got `%s`"):format(getterKey, type(getter))) end
         local getterInfo = debug.getinfo(getter, "u")
         if getterInfo.nparams ~= 1 then error(("syntax error: the getters(`%s`) can not have parameters"):format(getterKey)) end
         getters[getterKey] = getter
+      end
+    elseif memberKey == "set" then
+      if type(member) ~= "table" then error(("syntax error: set expected `table`, got `%s`"):format(type(member))) end
+      for setterKey, setter in pairs(member) do
+        if type(setter) ~= "function" then error(("syntax error: the setters(`%s`) can be only a `function`, got `%s`"):format(setterKey, type(setter))) end
+        local getterInfo = debug.getinfo(setter, "u")
+        if getterInfo.nparams ~= 2 then error(("syntax error: the setters(`%s`) must have exactly one parameter"):format(setterKey)) end
+        setters[setterKey] = setter
       end
     else
       members[memberKey] = {}
@@ -81,6 +90,10 @@ local class<const> = function (Members)
           return value
         end,
         __newindex = function(_, memberKey, memberKeyValue)
+          if setters[memberKey] then
+            setters[memberKey](instance, memberKeyValue)
+            return
+          end
           local member<const> = members[memberKey]
           if not member then error(("`%s` does not exist"):format(memberKey)) end
           assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
@@ -135,15 +148,15 @@ local myClass<const> = class({
   },
   get = {
     getName = function(self)
-      return self.height
+      return self.name
     end,
   },
-  -- set = {
-  --   setName = function(self, name)
-  --     self.name = name
-  --     return true
-  --   end
-  -- },
+  set = {
+    setName = function(self, name)
+      self.name = name
+      return true
+    end
+  },
   -- accessor = {
   --   getAge = function(self)
   --     return self.age
@@ -163,6 +176,8 @@ local myClass<const> = class({
 })
 
 local Class<const> = myClass:new("Lenix", 20, 197)
+print(Class.getName)
+Class.setName = "Dev"
 print(Class.getName)
 
 
