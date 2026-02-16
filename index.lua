@@ -3,7 +3,7 @@ assert(_VERSION == "Lua 5.4", "THIS MODULE REQUIRES Lua 5.4")
 local class<const> = function (members)
   local properties<const> = {}
   local propertiesValues<const> = {}
-  
+
   -- initialize
   for varKey in pairs(members) do
     if varKey ~= "constructor" then
@@ -25,10 +25,19 @@ local class<const> = function (members)
       end
     elseif type(members[varKey]) ~= "function" then error("syntax error: constructor is not a function") end
   end
-  
-  return setmetatable({}, {
+
+  return setmetatable({
+    new = function(self, ...)
+      local instance<const> = {}
+      for propertyKey, property in pairs(properties) do
+        if not property.isStatic then
+          instance[propertyKey] = propertiesValues[propertyKey]
+        end
+      end
+    end
+  }, {
     __metatable = false,
-    __index = function(_, varKey)
+    __index = function(self, varKey)
       local property<const> = properties[varKey]
       assert(not property.isPrivate, ("`%s` property is private"):format(varKey))
       assert(property.isStatic, ("`%s` property is not static"):format(varKey))
@@ -53,19 +62,19 @@ local class<const> = function (members)
 end
 
 local myClass<const> = class({
-  name = {"Lenix", false, true, false, true},
-  height = {nil, true, true},
+  name = "Lenix",
+  height = {nil},
   age = 20,
   getHeight = {
     function(self)
       return self.height
-    end, false, true
+    end
   },
   setHeight = {
     function(self, height)
       self.height = height
       return true, "set successful"
-    end, false, true
+    end
   },
   --[[ reserved for later uses ]]
   -- get = {},
@@ -80,8 +89,8 @@ local myClass<const> = class({
   end
 })
 
-myClass:setHeight(197)
-print(myClass:getHeight())
+local Class<const> = myClass:new("Lenix", 20, 197, "O+")
+-- print(Class.name)
 -- local Class<const> = myClass:new("Lenix", 20, 197, "O+")
 -- Class.setHeight = function(self, new)
 --   self.height = new
