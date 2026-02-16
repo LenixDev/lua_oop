@@ -13,14 +13,14 @@ local class<const> = function (members)
         properties[varKey] = {
           isPrivate = members[varKey][2] == nil and true or members[varKey][2],
           isStatic = members[varKey][3] == nil and false or members[varKey][3] or false,
-          isConst = members[varKey][4] == nil and false or members[varKey][4] or false,
+          isConst = members[varKey][4] == nil and false or members[varKey][4] or true,
         }
       else
         propertiesValues[varKey] = members[varKey]
         properties[varKey] = {
           isPrivate = true,
           isStatic = false,
-          isConst =  false,
+          isConst =  true,
         }
       end
     end
@@ -53,12 +53,20 @@ local class<const> = function (members)
 end
 
 local myClass<const> = class({
-  name = {"Lenix", false, true, false},
+  name = {"Lenix", false, true, false, true},
+  height = {nil, true, true},
   age = 20,
-  height = {nil, false, true},
-  blood = {nil},
-  getHeight = {function(self) return true end, false, true, true},
-  setHeight = {function(self) self.blood = "O+" return true end, false, true},
+  getHeight = {
+    function(self)
+      return self.height
+    end, false, true
+  },
+  setHeight = {
+    function(self, height)
+      self.height = height
+      return true, "set successful"
+    end, false, true
+  },
   --[[ reserved for later uses ]]
   -- get = {},
   -- set = {},
@@ -73,6 +81,7 @@ local myClass<const> = class({
 })
 
 myClass:setHeight(197)
+print(myClass:getHeight())
 -- local Class<const> = myClass:new("Lenix", 20, 197, "O+")
 -- Class.setHeight = function(self, new)
 --   self.height = new
