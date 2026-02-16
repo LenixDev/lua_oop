@@ -34,16 +34,16 @@ local class<const> = function (Members)
       if type(member) == "table" then
         membersValues[memberKey] = member[1]
         members[memberKey] = {
-          isPrivate = default(member[2], true),
-          isStatic = default(member[3], false),
-          isConst = default(member[4], false),
+          private = default(member[2], true),
+          static = default(member[3], false),
+          immutable = default(member[4], false),
         }
       else
         membersValues[memberKey] = member
         members[memberKey] = {
-          isPrivate = true,
-          isStatic = false,
-          isConst = true,
+          private = true,
+          static = false,
+          immutable = true,
         }
       end
     end
@@ -53,7 +53,7 @@ local class<const> = function (Members)
     new = function(self, ...)
       local instance<const> = {}
       for memberKey, member in pairs(members) do
-        if not member.isStatic then
+        if not member.static then
           instance[memberKey] = membersValues[memberKey]
         end
       end
@@ -63,7 +63,7 @@ local class<const> = function (Members)
       else error("no constructor was provided") end
 
       for memberKey in pairs(members) do
-        if not instance[memberKey] and not members[memberKey].isStatic then
+        if not instance[memberKey] and not members[memberKey].static then
           error(("the `%s` was not instantiated in constructor"):format(memberKey))
         end
       end
@@ -76,8 +76,8 @@ local class<const> = function (Members)
           end
           local member<const> = members[memberKey]
           if not member then error(("`%s` does not exist"):format(memberKey)) end
-          assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
-          assert(not member.isStatic, ("`%s` is static member"):format(memberKey))
+          assert(not member.private, ("`%s` is not a public member"):format(memberKey))
+          assert(not member.static, ("`%s` is a static member"):format(memberKey))
 
           local value<const> = instance[memberKey]
           if type(value) == "function" then
@@ -95,9 +95,9 @@ local class<const> = function (Members)
           end
           local member<const> = members[memberKey]
           if not member then error(("`%s` does not exist"):format(memberKey)) end
-          assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
-          assert(not member.isStatic, ("`%s` is static member"):format(memberKey))
-          assert(not member.isConst, ("`%s` is constant member"):format(memberKey))
+          assert(not member.private, ("`%s` is not a public member"):format(memberKey))
+          assert(not member.static, ("`%s` is not a static member"):format(memberKey))
+          assert(not member.immutable, ("`%s` is not a mutable member"):format(memberKey))
           instance[memberKey] = memberKeyValue
         end
       })
@@ -114,8 +114,8 @@ local class<const> = function (Members)
         end
         error(("`%s` does not exist"):format(memberKey))
       end
-      assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
-      assert(member.isStatic, ("`%s` is not static member"):format(memberKey))
+      assert(not member.private, ("`%s` is not a public member"):format(memberKey))
+      assert(member.static, ("`%s` is not a static member"):format(memberKey))
       local value<const> = membersValues[memberKey]
 
       if type(value) == "function" then
@@ -137,9 +137,9 @@ local class<const> = function (Members)
         end
         error(("`%s` does not exist"):format(memberKey))
       end
-      assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
-      assert(member.isStatic, ("`%s` is not static member"):format(memberKey))
-      assert(not member.isConst, ("`%s` is constant member"):format(memberKey))
+      assert(not member.private, ("`%s` is not a public member"):format(memberKey))
+      assert(member.static, ("`%s` is not a static member"):format(memberKey))
+      assert(not member.immutable, ("`%s` is not a mutable member"):format(memberKey))
       membersValues[memberKey] = memberKeyValue
     end
   })
