@@ -3,24 +3,27 @@ assert(_VERSION == "Lua 5.4", "THIS MODULE REQUIRES Lua 5.4")
 local class<const> = function (Members)
   local members<const> = {}
   local membersValues<const> = {}
+  local function default(val, def)
+    if val ~= nil then return val else return def end
+  end
 
   -- initialize
   for memberKey in pairs(Members) do
     if memberKey ~= "constructor" then
       members[memberKey] = {}
       if type(Members[memberKey]) == 'table' then
-        membersValues[memberKey] = Members[memberKey][1] ~= nil and Members[memberKey][1] or nil
+        membersValues[memberKey] = Members[memberKey][1]
         members[memberKey] = {
-          isPrivate = Members[memberKey][2] == nil and true or Members[memberKey][2],
-          isStatic = Members[memberKey][3] == nil and false or Members[memberKey][3] or false,
-          isConst = Members[memberKey][4] == nil and false or Members[memberKey][4] or true,
+          isPrivate = default(Members[memberKey][2], true),
+          isStatic = default(Members[memberKey][3], false),
+          isConst = default(Members[memberKey][4], false),
         }
       else
         membersValues[memberKey] = Members[memberKey]
         members[memberKey] = {
           isPrivate = true,
           isStatic = false,
-          isConst =  true,
+          isConst = true,
         }
       end
     elseif type(Members[memberKey]) ~= "function" then error("syntax error: constructor is not a function") end
@@ -44,6 +47,7 @@ local class<const> = function (Members)
           print(('the `%s` was not instantiated in constructor'):format(memberKey))
         end
       end
+      
 
       return setmetatable({}, {
         __index = function(_, memberKey)
@@ -53,6 +57,10 @@ local class<const> = function (Members)
           return instance[memberKey]
         end,
         __newindex = function(_, memberKey, memberKeyValue)
+          local member<const> = members[memberKey]
+          assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
+          assert(not member.isStatic, ("`%s` is static member"):format(memberKey))
+          assert(not member.isConst, ("`%s` is constant member"):format(memberKey))
           instance[memberKey] = memberKeyValue
         end
       })
@@ -84,7 +92,7 @@ local class<const> = function (Members)
 end
 
 local myClass<const> = class({
-  name = {"Lenix", false},
+  name = {"Lenix", false, false, false},
   height = {nil},
   age = 20,
   getHeight = {
@@ -111,8 +119,10 @@ local myClass<const> = class({
   end
 })
 
-local Class<const> = myClass:new("Lenix", 20, 197, "O+")
-print(Class.name)
+local Class<const> = myClass:new("Lenix", 20, 197)
+-- print(Class.name)
+-- Class.name = "Dev"
+-- print(Class.name)
 -- local Class<const> = myClass:new("Lenix", 20, 197, "O+")
 -- Class.setHeight = function(self, new)
 --   self.height = new
