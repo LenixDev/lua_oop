@@ -53,7 +53,15 @@ local class<const> = function (Members)
           local member<const> = members[memberKey]
           assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
           assert(not member.isStatic, ("`%s` is static member"):format(memberKey))
-          return instance[memberKey]
+          local value<const> = instance[memberKey]
+    
+          if type(value) == "function" then
+            return function(_, ...)
+              return value(instance, ...)
+            end
+          end
+    
+          return value
         end,
         __newindex = function(_, memberKey, memberKeyValue)
           local member<const> = members[memberKey]
@@ -70,7 +78,7 @@ local class<const> = function (Members)
       local member<const> = members[memberKey]
       assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
       assert(member.isStatic, ("`%s` is not static member"):format(memberKey))
-      local value = membersValues[memberKey]
+      local value<const> = membersValues[memberKey]
 
       if type(value) == "function" then
         return function(_, ...)
@@ -97,7 +105,7 @@ local myClass<const> = class({
   getHeight = {
     function(self)
       return self.height
-    end, false, true
+    end, false
   },
   setHeight = {
     function(self, height)
@@ -118,7 +126,6 @@ local myClass<const> = class({
 })
 
 local Class<const> = myClass:new("Lenix", 20, 197)
-
 
 
 
