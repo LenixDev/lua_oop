@@ -34,6 +34,17 @@ local class<const> = function (members)
           instance[propertyKey] = propertiesValues[propertyKey]
         end
       end
+
+      if members.constructor then
+        members.constructor(instance, nil, ...)
+      else error('no constructor was provided') end
+
+      for propertyKey in pairs(properties) do
+        if not instance[propertyKey] then
+          print(('the `%s` was not instantiated in constructor'):format(propertyKey))
+        end
+      end
+      
     end
   }, {
     __metatable = false,
