@@ -18,7 +18,7 @@ local class<const> = function (Members)
       for getterKey, getter in pairs(member) do
         if type(getter) ~= "function" then error(("syntax error: the getters(`%s`) can be only a `function`, got `%s`"):format(getterKey, type(getter))) end
         local getterInfo = debug.getinfo(getter, "u")
-        if getterInfo.nparams ~= 1 then error(("syntax error: the getters(`%s`) can not have parameters"):format(getterKey)) end
+        if getterInfo.nparams ~= 1 then error(("syntax error: the getters(`%s`) can not have parameters (excluding `self`)"):format(getterKey)) end
         getters[getterKey] = getter
       end
     elseif memberKey == "set" then
@@ -26,7 +26,7 @@ local class<const> = function (Members)
       for setterKey, setter in pairs(member) do
         if type(setter) ~= "function" then error(("syntax error: the setters(`%s`) can be only a `function`, got `%s`"):format(setterKey, type(setter))) end
         local getterInfo = debug.getinfo(setter, "u")
-        if getterInfo.nparams ~= 2 then error(("syntax error: the setters(`%s`) must have exactly one parameter"):format(setterKey)) end
+        if getterInfo.nparams ~= 2 then error(("syntax error: the setters(`%s`) must have exactly one parameter (excluding `self`)"):format(setterKey)) end
         setters[setterKey] = setter
       end
     else
@@ -80,7 +80,6 @@ local class<const> = function (Members)
           assert(not member.isStatic, ("`%s` is static member"):format(memberKey))
 
           local value<const> = instance[memberKey]
-
           if type(value) == "function" then
             return function(_, ...)
               return value(instance, ...)
@@ -128,10 +127,6 @@ local class<const> = function (Members)
       return value
     end,
     __newindex = function(_, memberKey, memberKeyValue)
-      if setters[memberKey] then
-        setters[memberKey](membersValues, memberKeyValue)
-        return
-      end
       local member<const> = members[memberKey]
       if not member then
         if setters[memberKey] then
@@ -195,8 +190,6 @@ local myClass<const> = class({
 })
 
 local Class<const> = myClass:new("Lenix", 20, 197)
-print(myClass.getName)
-myClass.setName = "Dev"
-print(myClass.getName())
+print(Class.getName)
 
 --virtual
