@@ -3,30 +3,41 @@ assert(_VERSION == "Lua 5.4", "THIS MODULE REQUIRES Lua 5.4")
 local class<const> = function (Members)
   local members<const> = {}
   local membersValues<const> = {}
-  local function default(val, def)
-    if val ~= nil then return val else return def end
+  local default<const> = function(existingValue, defaultValue)
+    if existingValue ~= nil then return existingValue else return defaultValue end
   end
+  local getters<const> = {}
 
   -- initialize
-  for memberKey in pairs(Members) do
-    if memberKey ~= "constructor" then
+  for memberKey, member in pairs(Members) do
+    if memberKey == "constructor" then
+      if type(member) ~= "function" then error(("syntax error: constructor expected `%s`, got `%s`"):format("function", type(member))) end
+    elseif memberKey == "get" then
+      if type(member) ~= "table" then error(("syntax error: get expected `%s`, got `%s`"):format("table", type(member))) end
+      for getterKey, getter in pairs(member) do
+        if type(getter) ~= "function" then error(("syntax error: the getters(`%s`) can be only a `%s`, got `%s`"):format(getterKey, "function", type(getter))) end
+        local getterInfo = debug.getinfo(getter, "u")
+        if getterInfo.nparams ~= 1 then error(("syntax error: the getters(`%s`) can not have parameters"):format(getterKey)) end
+        getters[getterKey] = getter
+      end
+    else
       members[memberKey] = {}
-      if type(Members[memberKey]) == 'table' then
-        membersValues[memberKey] = Members[memberKey][1]
+      if type(member) == "table" then
+        membersValues[memberKey] = member[1]
         members[memberKey] = {
-          isPrivate = default(Members[memberKey][2], true),
-          isStatic = default(Members[memberKey][3], false),
-          isConst = default(Members[memberKey][4], false),
+          isPrivate = default(member[2], true),
+          isStatic = default(member[3], false),
+          isConst = default(member[4], false),
         }
       else
-        membersValues[memberKey] = Members[memberKey]
+        membersValues[memberKey] = member
         members[memberKey] = {
           isPrivate = true,
           isStatic = false,
           isConst = true,
         }
       end
-    elseif type(Members[memberKey]) ~= "function" then error("syntax error: constructor is not a function") end
+    end
   end
 
   return setmetatable({
@@ -40,20 +51,25 @@ local class<const> = function (Members)
 
       if Members.constructor then
         Members.constructor(instance, nil, ...)
-      else error('no constructor was provided') end
+      else error("no constructor was provided") end
 
       for memberKey in pairs(members) do
         if not instance[memberKey] and not members[memberKey].isStatic then
-          error(('the `%s` was not instantiated in constructor'):format(memberKey))
+          error(("the `%s` was not instantiated in constructor"):format(memberKey))
         end
       end
 
       return setmetatable({}, {
         __metatable = "access denied",
         __index = function(_, memberKey)
+          if getters[memberKey] then
+            return getters[memberKey](instance)
+          end
           local member<const> = members[memberKey]
+          if not member then error(("`%s` does not exist"):format(memberKey)) end
           assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
           assert(not member.isStatic, ("`%s` is static member"):format(memberKey))
+
           local value<const> = instance[memberKey]
 
           if type(value) == "function" then
@@ -66,6 +82,7 @@ local class<const> = function (Members)
         end,
         __newindex = function(_, memberKey, memberKeyValue)
           local member<const> = members[memberKey]
+          if not member then error(("`%s` does not exist"):format(memberKey)) end
           assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
           assert(not member.isStatic, ("`%s` is static member"):format(memberKey))
           assert(not member.isConst, ("`%s` is constant member"):format(memberKey))
@@ -77,6 +94,7 @@ local class<const> = function (Members)
     __metatable = "access denied",
     __index = function(self, memberKey)
       local member<const> = members[memberKey]
+      if not member then error(("`%s` does not exist"):format(memberKey)) end
       assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
       assert(member.isStatic, ("`%s` is not static member"):format(memberKey))
       local value<const> = membersValues[memberKey]
@@ -91,6 +109,7 @@ local class<const> = function (Members)
     end,
     __newindex = function(_, memberKey, memberKeyValue)
       local member<const> = members[memberKey]
+      if not member then error(("`%s` does not exist"):format(memberKey)) end
       assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
       assert(member.isStatic, ("`%s` is not static member"):format(memberKey))
       assert(not member.isConst, ("`%s` is constant member"):format(memberKey))
@@ -114,10 +133,27 @@ local myClass<const> = class({
       return true, "set successful"
     end, false, true
   },
-  --[[ reserved for later uses ]]
-  -- get = {},
-  -- set = {},
-  -- accessor = {},
+  get = {
+    getName = function(self)
+      return self.height
+    end,
+  },
+  -- set = {
+  --   setName = function(self, name)
+  --     self.name = name
+  --     return true
+  --   end
+  -- },
+  -- accessor = {
+  --   getAge = function(self)
+  --     return self.age
+  --   end,
+  --   setAge = function(self, age)
+  --     self.age = age
+  --     return true
+  --   end
+  -- },
+  -- reserved for later uses
   -- override = {},
   constructor = function(self, super, name, age, height)
     self.name = name
@@ -127,7 +163,7 @@ local myClass<const> = class({
 })
 
 local Class<const> = myClass:new("Lenix", 20, 197)
-
+print(Class.getName)
 
 
 --virtual
