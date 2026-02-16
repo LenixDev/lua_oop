@@ -2,37 +2,53 @@ assert(_VERSION == "Lua 5.4", "THIS MODULE REQUIRES Lua 5.4")
 
 local class<const> = function (members)
   local properties<const> = {}
+  local propertiesValues<const> = {}
   
   -- initialize
   for varKey in pairs(members) do
     if varKey ~= "constructor" then
       properties[varKey] = {}
       if type(members[varKey]) == 'table' then
-        properties[varKey]["value"] = members[varKey][1] ~= nil and members[varKey][1] or nil
-        properties[varKey]["isPrivate"] = members[varKey][2] == nil and true or members[varKey][2]
-        properties[varKey]["isStatic"] = members[varKey][3] == nil and false or members[varKey][3] or false
-        properties[varKey]["isConst"] = members[varKey][4] == nil and false or members[varKey][4] or false
+        propertiesValues[varKey] = members[varKey][1] ~= nil and members[varKey][1] or nil
+        properties[varKey] = {
+          value = members[varKey][1],
+          isPrivate = members[varKey][2] == nil and true or members[varKey][2],
+          isStatic = members[varKey][3] == nil and false or members[varKey][3] or false,
+          isConst = members[varKey][4] == nil and false or members[varKey][4] or false,
+        }
       else
-        properties[varKey]["value"] = members[varKey]
-        properties[varKey]["isPrivate"] = true
-        properties[varKey]["isStatic"] = false
-        properties[varKey]["isConst"] = false
+        propertiesValues[varKey] = members[varKey]
+        properties[varKey] = {
+          value = members[varKey],
+          isPrivate = true,
+          isStatic = false,
+          isConst =  false,
+        }
       end
     end
   end
+  
   return setmetatable({}, {
     __index = function(_, varKey)
       local property<const> = properties[varKey]
-      assert(not property["isPrivate"], ("`%s` property is private"):format(varKey))
-      assert(property["isStatic"], ("`%s` property is not static"):format(varKey))
-      return property["value"]
+      assert(not property.isPrivate, ("`%s` property is private"):format(varKey))
+      assert(property.isStatic, ("`%s` property is not static"):format(varKey))
+      local value = propertiesValues[varKey]
+
+      if type(value) == "function" then
+        return function(...)
+          return value(propertiesValues, ...)
+        end
+      end
+
+      return value
     end,
     __newindex = function(_, varKey, varValue)
       local property<const> = properties[varKey]
-      assert(not property["isPrivate"], ("`%s` property is private"):format(varKey))
-      assert(property["isStatic"], ("`%s` property is not static"):format(varKey))
-      assert(not property["isConst"], ("`%s` property is constant"):format(varKey))
-      property["value"] = varValue
+      assert(not property.isPrivate, ("`%s` property is private"):format(varKey))
+      assert(property.isStatic, ("`%s` property is not static"):format(varKey))
+      assert(not property.isConst, ("`%s` property is constant"):format(varKey))
+      propertiesValues[varKey] = varValue
     end
   })
 end
@@ -43,7 +59,7 @@ local myClass<const> = class({
   height = {nil},
   blood = {nil},
   getHeight = {function() return true end, false, true},
-  setHeight = {function(self, new) self.height = new return true end, false, true},
+  setHeight = {function(self, new) self.height = new print(self.height) return true end, false, true},
   --[[ reserved for later uses ]]
   -- get = {},
   -- set = {},
