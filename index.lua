@@ -44,12 +44,12 @@ local class<const> = function (Members)
           print(('the `%s` was not instantiated in constructor'):format(memberKey))
         end
       end
-      
+
       return setmetatable({}, {
         __index = function(_, memberKey)
           local member<const> = members[memberKey]
-          assert(not member.isPrivate, ("`%s` member is private"):format(memberKey))
-          assert(member.isStatic, ("`%s` member is static"):format(memberKey))
+          assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
+          assert(not member.isStatic, ("`%s` is static member"):format(memberKey))
           return instance[memberKey]
         end,
         __newindex = function(_, memberKey, memberKeyValue)
@@ -61,8 +61,8 @@ local class<const> = function (Members)
     __metatable = false,
     __index = function(self, memberKey)
       local member<const> = members[memberKey]
-      assert(not member.isPrivate, ("`%s` member is private"):format(memberKey))
-      assert(member.isStatic, ("`%s` member is not static"):format(memberKey))
+      assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
+      assert(member.isStatic, ("`%s` is not static member"):format(memberKey))
       local value = membersValues[memberKey]
 
       if type(value) == "function" then
@@ -75,16 +75,16 @@ local class<const> = function (Members)
     end,
     __newindex = function(_, memberKey, memberKeyValue)
       local member<const> = members[memberKey]
-      assert(not member.isPrivate, ("`%s` member is private"):format(memberKey))
-      assert(member.isStatic, ("`%s` member is not static"):format(memberKey))
-      assert(not member.isConst, ("`%s` member is constant"):format(memberKey))
+      assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
+      assert(member.isStatic, ("`%s` is not static member"):format(memberKey))
+      assert(not member.isConst, ("`%s` is constant member"):format(memberKey))
       membersValues[memberKey] = memberKeyValue
     end
   })
 end
 
 local myClass<const> = class({
-  name = {"Lenix"},
+  name = {"Lenix", false},
   height = {nil},
   age = 20,
   getHeight = {
