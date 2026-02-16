@@ -27,6 +27,7 @@ local class<const> = function (members)
   end
   
   return setmetatable({}, {
+    __metatable = false,
     __index = function(_, varKey)
       local property<const> = properties[varKey]
       assert(not property.isPrivate, ("`%s` property is private"):format(varKey))
@@ -34,8 +35,8 @@ local class<const> = function (members)
       local value = propertiesValues[varKey]
 
       if type(value) == "function" then
-        return function(...)
-          return value(...)
+        return function(_, ...)
+          return value(propertiesValues, ...)
         end
       end
 
@@ -57,7 +58,7 @@ local myClass<const> = class({
   height = {nil, false, true},
   blood = {nil},
   getHeight = {function(self) return true end, false, true, true},
-  setHeight = {function(self) return true end, false, true},
+  setHeight = {function(self) self.blood = "O+" return true end, false, true},
   --[[ reserved for later uses ]]
   -- get = {},
   -- set = {},
@@ -71,7 +72,7 @@ local myClass<const> = class({
   end
 })
 
-
+myClass:setHeight(197)
 -- local Class<const> = myClass:new("Lenix", 20, 197, "O+")
 -- Class.setHeight = function(self, new)
 --   self.height = new
