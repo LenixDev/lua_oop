@@ -47,20 +47,21 @@ local class<const> = function (Members)
           error(('the `%s` was not instantiated in constructor'):format(memberKey))
         end
       end
-      
+
       return setmetatable({}, {
+        __metatable = "access denied",
         __index = function(_, memberKey)
           local member<const> = members[memberKey]
           assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
           assert(not member.isStatic, ("`%s` is static member"):format(memberKey))
           local value<const> = instance[memberKey]
-    
+
           if type(value) == "function" then
             return function(_, ...)
               return value(instance, ...)
             end
           end
-    
+
           return value
         end,
         __newindex = function(_, memberKey, memberKeyValue)
@@ -73,7 +74,7 @@ local class<const> = function (Members)
       })
     end
   }, {
-    __metatable = false,
+    __metatable = "access denied",
     __index = function(self, memberKey)
       local member<const> = members[memberKey]
       assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
