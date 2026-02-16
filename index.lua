@@ -107,7 +107,14 @@ local class<const> = function (Members)
     __metatable = "access denied",
     __index = function(self, memberKey)
       local member<const> = members[memberKey]
-      if not member then error(("`%s` does not exist"):format(memberKey)) end
+      if not member then 
+        if getters[memberKey] then
+          return getters[memberKey](membersValues)
+        elseif setters[memberKey] then
+          error(("setters can not be accessed: at `%s`"):format(memberKey))
+        end
+        error(("`%s` does not exist"):format(memberKey))
+      end
       assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
       assert(member.isStatic, ("`%s` is not static member"):format(memberKey))
       local value<const> = membersValues[memberKey]
@@ -121,8 +128,20 @@ local class<const> = function (Members)
       return value
     end,
     __newindex = function(_, memberKey, memberKeyValue)
+      if setters[memberKey] then
+        setters[memberKey](membersValues, memberKeyValue)
+        return
+      end
       local member<const> = members[memberKey]
-      if not member then error(("`%s` does not exist"):format(memberKey)) end
+      if not member then
+        if setters[memberKey] then
+          setters[memberKey](membersValues, memberKeyValue)
+        return
+        elseif getters[memberKey] then
+          error(("getters can not be modified: at `%s`"):format(memberKey))
+        end
+        error(("`%s` does not exist"):format(memberKey))
+      end
       assert(not member.isPrivate, ("`%s` is a private member"):format(memberKey))
       assert(member.isStatic, ("`%s` is not static member"):format(memberKey))
       assert(not member.isConst, ("`%s` is constant member"):format(memberKey))
@@ -176,9 +195,8 @@ local myClass<const> = class({
 })
 
 local Class<const> = myClass:new("Lenix", 20, 197)
-print(Class.getName)
-Class.setName = "Dev"
-print(Class.getName)
-
+print(myClass.getName)
+myClass.setName = "Dev"
+print(myClass.getName())
 
 --virtual
