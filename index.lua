@@ -23,7 +23,7 @@ local class<const> = function (members)
           isConst =  true,
         }
       end
-    end
+    elseif type(members[varKey]) ~= "function" then error("syntax error: constructor is not a function") end
   end
   
   return setmetatable({}, {
