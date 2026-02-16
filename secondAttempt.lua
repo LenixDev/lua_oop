@@ -133,7 +133,7 @@ local myClass<const> = class({
   },
   set = {
     setHeight = {
-      function(self, new)
+      function(new)
         self.height = new
       end, "function"
     },
