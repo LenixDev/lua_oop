@@ -11,7 +11,6 @@ local class<const> = function (members)
       if type(members[varKey]) == 'table' then
         propertiesValues[varKey] = members[varKey][1] ~= nil and members[varKey][1] or nil
         properties[varKey] = {
-          value = members[varKey][1],
           isPrivate = members[varKey][2] == nil and true or members[varKey][2],
           isStatic = members[varKey][3] == nil and false or members[varKey][3] or false,
           isConst = members[varKey][4] == nil and false or members[varKey][4] or false,
@@ -19,7 +18,6 @@ local class<const> = function (members)
       else
         propertiesValues[varKey] = members[varKey]
         properties[varKey] = {
-          value = members[varKey],
           isPrivate = true,
           isStatic = false,
           isConst =  false,
@@ -27,7 +25,7 @@ local class<const> = function (members)
       end
     end
   end
-  
+
   return setmetatable({}, {
     __index = function(_, varKey)
       local property<const> = properties[varKey]
@@ -56,10 +54,12 @@ end
 local myClass<const> = class({
   name = {"Lenix", false, true, false},
   age = 20,
-  height = {nil},
+  height = {nil, },
   blood = {nil},
   getHeight = {function() return true end, false, true},
-  setHeight = {function(self, new) self.height = new print(self.height) return true end, false, true},
+  setHeight = {function(self, new) self.height = new 
+    for i, v in pairs(self.height) do print(i, self[i]) end
+    return true end, false, true},
   --[[ reserved for later uses ]]
   -- get = {},
   -- set = {},
