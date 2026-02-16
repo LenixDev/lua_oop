@@ -44,7 +44,7 @@ local class<const> = function (Members)
 
       for memberKey in pairs(members) do
         if not instance[memberKey] and not members[memberKey].isStatic then
-          print(('the `%s` was not instantiated in constructor'):format(memberKey))
+          error(('the `%s` was not instantiated in constructor'):format(memberKey))
         end
       end
       
