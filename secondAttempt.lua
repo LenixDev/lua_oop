@@ -121,18 +121,27 @@ local class<const> = function (fields)
 end
 
 local myClass<const> = class({
-  --[[ [1]= value, [2]= isPrivate | true, [3]= isStatic | false, [4]= isConst | false ]]
-  name = {"Lenix", false, true, true},
-  age = 20,
-  height = {nil},
-  blood = {nil},
-  getHeight = {nil},
-  setHeight = {nil},
-  --[[ reserved for later uses ]]
-  get = {},
-  set = {},
-  accessor = {},
-  override = {},
+  private = {
+    height = {nil, "number"},
+  },
+  get = {
+    blood = {nil, "string"},
+    getHeight = {function(self, new)
+      self.setHeight(self, new)
+      return self.height
+    end, "function"}
+  },
+  set = {
+    setHeight = {
+      function(self, new)
+        self.height = new
+      end, "function"
+    },
+  },
+  accessor = {
+    name = {nil, "string"},
+    age = {nil, "number"},
+  },
   constructor = function(self, super, name, age, height, blood)
     self.name = name
     self.age = age
@@ -142,17 +151,16 @@ local myClass<const> = class({
 })
 
 
--- local Class<const> = myClass:new("Lenix", 20, 197, "O+")
--- Class.setHeight = function(self, new)
---   self.height = new
--- end
+local Class<const> = myClass:new("Lenix", 20, 197, "O+")
+Class.setHeight = function(self, new)
+  self.height = new
+end
 
 
 
--- print(Class.getHeight(198))
+print(Class.getHeight(198))
 
 
 
 
 
---virtual
