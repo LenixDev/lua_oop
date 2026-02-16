@@ -25,7 +25,7 @@ local class<const> = function (members)
       end
     end
   end
-
+  
   return setmetatable({}, {
     __index = function(_, varKey)
       local property<const> = properties[varKey]
@@ -35,7 +35,7 @@ local class<const> = function (members)
 
       if type(value) == "function" then
         return function(...)
-          return value(propertiesValues, ...)
+          return value(...)
         end
       end
 
@@ -54,12 +54,16 @@ end
 local myClass<const> = class({
   name = {"Lenix", false, true, false},
   age = 20,
-  height = {nil, },
+  height = {nil, false, true},
   blood = {nil},
   getHeight = {function() return true end, false, true},
-  setHeight = {function(self, new) self.height = new 
-    for i, v in pairs(self.height) do print(i, self[i]) end
-    return true end, false, true},
+  setHeight = {
+    function(self, new)
+      self.height = new
+      return self.height
+    end, 
+    false, true
+  },
   --[[ reserved for later uses ]]
   -- get = {},
   -- set = {},
@@ -74,6 +78,7 @@ local myClass<const> = class({
 })
 
 print(myClass:setHeight(21))
+
 -- local Class<const> = myClass:new("Lenix", 20, 197, "O+")
 -- Class.setHeight = function(self, new)
 --   self.height = new
