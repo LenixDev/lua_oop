@@ -48,13 +48,6 @@ local class<const> = function (Members, Parent)
       end
     end
   end
-  
-  -- for parentMemberKey, parentMember in pairs(Parent or {}) do
-  --   if not members[parentMemberKey] then  -- Don't override child's own members
-  --     members[parentKey] = parentMember
-  --     membersValues[parentKey] = parentMembersValues[parentMemberKey]
-  --   end
-  -- end
 
   return setmetatable({
     new = function(self, ...)
@@ -65,26 +58,39 @@ local class<const> = function (Members, Parent)
         end
       end
 
-      if Members.constructor then
+      if Members.constructor and not Parent then
         Members.constructor(instance, nil, ...)
+      elseif Members.constructor and Parent then
+        local super<const> = function(...)
+          if not {...} then error(("the parent class was not instantiated: at `%s`"):format(memberKey)) end
+          local parentIntance = Parent:new(...)
+          for memberKey, memberValue in pairs(parentIntance.__instance) do
+            instance[memberKey] = memberValue
+          end
+          return parentIntance
+        end
+        Members.constructor(instance, super, ...)
       else error("no constructor was provided") end
 
-      for memberKey in pairs(members) do
-        if not instance[memberKey] and not members[memberKey].static then
+      for memberKey, member in pairs(members) do
+        if not instance[memberKey] and not member.static then
           error(("the `%s` was not instantiated in constructor"):format(memberKey))
         end
       end
 
       return setmetatable({}, {
         __metatable = "access denied",
+        __instance = instance,
         __index = function(_, memberKey)
+          if memberKey == "__instance" then
+            return instance
+          end
           local member<const> = members[memberKey]
           if not member then 
-            print(memberKey, 1)
             if getters[memberKey] then
               return getters[memberKey](instance)
-            -- elseif Parent and Parent[memberKey] then
-            --   return Parent[memberKey]
+            elseif Parent then
+              return instance[memberKey]
             elseif setters[memberKey] then
               error(("setters can not be accessed: at `%s`"):format(memberKey))
             end
@@ -106,9 +112,8 @@ local class<const> = function (Members, Parent)
           if setters[memberKey] then
             setters[memberKey](instance, memberKeyValue)
             return
-          -- elseif Parent[memberKey] then
-          --   Parent[memberKey] = memberKeyValue
-          --   return
+          elseif Parent and Parent[memberKey] then
+            error(("the parent class was not instantiated: at `%s`"):format(memberKey))
           elseif getters[memberKey] then
             error(("getters can not be modified: at `%s`"):format(memberKey))
           end
@@ -124,13 +129,11 @@ local class<const> = function (Members, Parent)
   }, {
     __metatable = "access denied",
     __index = function(self, memberKey)
-      print(memberKey, 2)
       local member<const> = members[memberKey]
       if not member then 
         if getters[memberKey] then
           return getters[memberKey](membersValues)
         elseif Parent then
-          print(memberKey)
           return Parent[memberKey]
         elseif setters[memberKey] then
           error(("setters can not be accessed: at `%s`"):format(memberKey))
@@ -172,7 +175,7 @@ local class<const> = function (Members, Parent)
 end
 
 local parent<const> = class({
-  name = {"Lenix", false, true},
+  name = {"undefined", true},
   -- reserved for later uses
   -- override = {},
   constructor = function(self, super, name)
@@ -183,15 +186,17 @@ local parent<const> = class({
 local child<const> = class({
   nickname = {nil, false},
   constructor = function(self, super, nickname)
+    super("Lenix")
     self.nickname = nickname
   end
 }, parent)
 
-local clp = parent:new("Lenix Parent")
 -- print(clp.name)
 local clc = child:new("Lenix Child")
 
+-- clc.name = "Dev"
 print(clc.name)
+-- print(clp.name)
 -- print(clc.nickname)
 
 --virtual
