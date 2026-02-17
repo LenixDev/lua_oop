@@ -49,7 +49,27 @@ local class<const> = function (Members, Parent)
     end
   end
 
+  if Parent and Parent.__extended then
+    for getterKey, getter in pairs(Parent.__extended.getters) do
+      if not getters[getterKey] then
+        getters[getterKey] = getter
+      end
+    end
+
+    for setterKey, setter in pairs(Parent.__extended.setters) do
+      if not setters[setterKey] then
+        setters[setterKey] = setter
+      end
+    end
+  end
+
   return setmetatable({
+    __extended = {
+      members = members,
+      membersValues = membersValues,
+      getters = getters,
+      setters = setters
+    },
     new = function(self, ...)
       local instance<const> = {}
       for memberKey, member in pairs(members) do
@@ -61,13 +81,17 @@ local class<const> = function (Members, Parent)
       if Members.constructor and not Parent then
         Members.constructor(instance, nil, ...)
       elseif Members.constructor and Parent then
-        local super<const> = function(...)
-          if not {...} then error(("the parent class was not instantiated: at `%s`"):format(memberKey)) end
-          local parentIntance = Parent:new(...)
-          for memberKey, memberValue in pairs(parentIntance.__instance) do
-            instance[memberKey] = memberValue
+        local super = function(...)
+          local parentInstance = Parent:new(...)
+
+          local parentMetatable = debug.getmetatable(parentInstance)
+          if parentMetatable and parentMetatable.__instance then
+            for memberKey, memberValue in pairs(parentMetatable.__instance) do
+              instance[memberKey] = memberValue
+            end
           end
-          return parentIntance
+
+          return parentInstance
         end
         Members.constructor(instance, super, ...)
       else error("no constructor was provided") end
@@ -78,13 +102,18 @@ local class<const> = function (Members, Parent)
         end
       end
 
+      if Parent and Parent.__extended then
+        for memberKey, member in pairs(Parent.__extended.members) do
+          if not instance[memberKey] and not member.static then
+            error(("derived member `%s` was not instantiated"):format(memberKey))
+          end
+        end
+      end
+
       return setmetatable({}, {
         __metatable = "access denied",
         __instance = instance,
         __index = function(_, memberKey)
-          if memberKey == "__instance" then
-            return instance
-          end
           local member<const> = members[memberKey]
           if not member then 
             if getters[memberKey] then
@@ -92,7 +121,7 @@ local class<const> = function (Members, Parent)
             elseif Parent then
               return instance[memberKey]
             elseif setters[memberKey] then
-              error(("setters can not be accessed: at `%s`"):format(memberKey))
+              error(("`%s` setter can not be accessed"):format(memberKey))
             end
             error(("`%s` does not exist"):format(memberKey))  
           end
@@ -112,17 +141,25 @@ local class<const> = function (Members, Parent)
           if setters[memberKey] then
             setters[memberKey](instance, memberValue)
             return
-          elseif Parent then
-            instance[memberKey] = memberValue
-            return
-          elseif getters[memberKey] then
-            error(("getters can not be modified: at `%s`"):format(memberKey))
           end
-          local member<const> = members[memberKey]
-          if not member then error(("`%s` does not exist"):format(memberKey)) end
+
+          local member = members[memberKey]
+
+          if not member and Parent and Parent.__extended then
+            member = Parent.__extended.members[memberKey]
+          end
+
+          if not member then 
+            if getters[memberKey] then
+              error(("getters can not be modified: at `%s`"):format(memberKey))
+            end
+            error(("`%s` does not exist"):format(memberKey))
+          end
+
           assert(not member.private, ("`%s` is not a public member"):format(memberKey))
           assert(not member.static, ("`%s` is a static member"):format(memberKey))
           assert(not member.immutable, ("`%s` is not a mutable member"):format(memberKey))
+
           instance[memberKey] = memberValue
         end
       })
@@ -153,7 +190,7 @@ local class<const> = function (Members, Parent)
 
       return value
     end,
-    __newindex = function(_, memberKey, memberValue)
+    __newindex = function(self, memberKey, memberValue)
       local member<const> = members[memberKey]
       if not member then
         if setters[memberKey] then
@@ -175,40 +212,11 @@ local class<const> = function (Members, Parent)
   })
 end
 
-local parent<const> = class({
-  name = {"undefined", false},
-  -- reserved for later uses
-  -- override = {},
-  constructor = function(self, super, name)
-    self.name = name
-  end
-})
 
-local child<const> = class({
-  nickname = {nil, false},
-  constructor = function(self, super, nickname)
-    super("Lenix")
-    self.nickname = nickname
-  end
-}, parent)
 
--- print(clp.name)
-local clc = child:new("Lenix Child")
 
-clc.name = "Dev"
-print(clc.name)
--- print(clp.name)
--- print(clc.nickname)
 
 --virtual
-
-
-
-
-
-
-
-
 
 
 
