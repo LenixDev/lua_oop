@@ -108,12 +108,13 @@ local class<const> = function (Members, Parent)
 
           return value
         end,
-        __newindex = function(_, memberKey, memberKeyValue)
+        __newindex = function(_, memberKey, memberValue)
           if setters[memberKey] then
-            setters[memberKey](instance, memberKeyValue)
+            setters[memberKey](instance, memberValue)
             return
-          elseif Parent and Parent[memberKey] then
-            error(("the parent class was not instantiated: at `%s`"):format(memberKey))
+          elseif Parent then
+            instance[memberKey] = memberValue
+            return
           elseif getters[memberKey] then
             error(("getters can not be modified: at `%s`"):format(memberKey))
           end
@@ -122,7 +123,7 @@ local class<const> = function (Members, Parent)
           assert(not member.private, ("`%s` is not a public member"):format(memberKey))
           assert(not member.static, ("`%s` is a static member"):format(memberKey))
           assert(not member.immutable, ("`%s` is not a mutable member"):format(memberKey))
-          instance[memberKey] = memberKeyValue
+          instance[memberKey] = memberValue
         end
       })
     end
@@ -152,14 +153,14 @@ local class<const> = function (Members, Parent)
 
       return value
     end,
-    __newindex = function(_, memberKey, memberKeyValue)
+    __newindex = function(_, memberKey, memberValue)
       local member<const> = members[memberKey]
       if not member then
         if setters[memberKey] then
-          setters[memberKey](membersValues, memberKeyValue)
+          setters[memberKey](membersValues, memberValue)
           return
         elseif Parent then
-          Parent[memberKey] = memberKeyValue
+          Parent[memberKey] = memberValue
           return
         elseif getters[memberKey] then
           error(("getters can not be modified: at `%s`"):format(memberKey))
@@ -169,13 +170,13 @@ local class<const> = function (Members, Parent)
       assert(not member.private, ("`%s` is not a public member"):format(memberKey))
       assert(member.static, ("`%s` is not a static member"):format(memberKey))
       assert(not member.immutable, ("`%s` is not a mutable member"):format(memberKey))
-      membersValues[memberKey] = memberKeyValue
+      membersValues[memberKey] = memberValue
     end
   })
 end
 
 local parent<const> = class({
-  name = {"undefined", true},
+  name = {"undefined", false},
   -- reserved for later uses
   -- override = {},
   constructor = function(self, super, name)
@@ -194,7 +195,7 @@ local child<const> = class({
 -- print(clp.name)
 local clc = child:new("Lenix Child")
 
--- clc.name = "Dev"
+clc.name = "Dev"
 print(clc.name)
 -- print(clp.name)
 -- print(clc.nickname)
