@@ -37,6 +37,8 @@ local class<const> = function (Members, Parent)
           private = default(member[2], true),
           static = default(member[3], false),
           immutable = default(member[4], false),
+          virtual = default(member[5], false),      -- Add virtual flag
+          override = default(member[6], false),     -- Add override flag
         }
       else
         membersValues[memberKey] = member
@@ -44,16 +46,44 @@ local class<const> = function (Members, Parent)
           private = true,
           static = false,
           immutable = true,
+          virtual = false,
+          override = false,
         }
       end
     end
   end
 
+  -- Validate overrides BEFORE inheriting parent members
+  for memberKey, member in pairs(members) do
+    if member.override then
+      if not Parent or not Parent.__extended then
+        error(("cannot override `%s`: no parent class"):format(memberKey))
+      end
+      
+      local parentMember = Parent.__extended.members[memberKey]
+      if not parentMember then
+        error(("cannot override `%s`: parent doesn't have this method"):format(memberKey))
+      end
+      
+      if not parentMember.virtual then
+        error(("cannot override `%s`: parent method is not virtual"):format(memberKey))
+      end
+    end
+  end
+
+  -- Now inherit parent members
   if Parent and Parent.__extended then
     for memberKey, member in pairs(Parent.__extended.members) do
-      if not members[memberKey] then  -- Don't override child's own members
+      if not members[memberKey] then
+        -- Child doesn't define it, inherit from parent
         members[memberKey] = member
         membersValues[memberKey] = Parent.__extended.membersValues[memberKey]
+      else
+        -- Child defines it - must have override=true if parent has it
+        if not members[memberKey].override then
+          error(("method `%s` already exists in parent, must use override flag"):format(memberKey))
+        end
+        -- Override is valid (already validated above), child's version stays
       end
     end
 
@@ -228,16 +258,21 @@ local class<const> = function (Members, Parent)
   })
 end
 
+-- Test
 local private, static, immutable, virtual, override = true, true, true, true, true
--- Parent marks method as virtual (overridable)
+
 local Parent = class({
-  greet = {function(self) return "Hello from parent" end, nil, nil, nil, virtual},
-  --       [1]=value, [2]=private, [3]=static, [4]=immutable, [5]=virtual, [6]=override
+  greet = {function(self) return "Hello from parent" end, true, false, false, virtual},
   constructor = function(self) end
 })
 
--- Child must explicitly override
 local Child = class({
-  greet = {function(self) return "Hello from child" end, nil, nil, nil, nil, override},
+  greet = {function(self) return "Hello from child" end, false, false, false, false, override},
   constructor = function(self, super) super() end
 }, Parent)
+
+local c = Child:new()
+print(c.greet())  -- Should print "Hello from child"
+
+
+
