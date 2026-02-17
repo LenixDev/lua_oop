@@ -50,6 +50,13 @@ local class<const> = function (Members, Parent)
   end
 
   if Parent and Parent.__extended then
+    for memberKey, member in pairs(Parent.__extended.members) do
+      if not members[memberKey] then  -- Don't override child's own members
+        members[memberKey] = member
+        membersValues[memberKey] = Parent.__extended.membersValues[memberKey]
+      end
+    end
+
     for getterKey, getter in pairs(Parent.__extended.getters) do
       if not getters[getterKey] then
         getters[getterKey] = getter
@@ -81,13 +88,16 @@ local class<const> = function (Members, Parent)
       if Members.constructor and not Parent then
         Members.constructor(instance, nil, ...)
       elseif Members.constructor and Parent then
-        local super = function(...)
-          local parentInstance = Parent:new(...)
+        local super<const> = function(...)
+          local parentInstance<const> = Parent:new(...)
 
-          local parentMetatable = debug.getmetatable(parentInstance)
+          local parentMetatable<const> = debug.getmetatable(parentInstance)
           if parentMetatable and parentMetatable.__instance then
             for memberKey, memberValue in pairs(parentMetatable.__instance) do
-              instance[memberKey] = memberValue
+              local parentMember = Parent.__extended.members[memberKey]
+              if parentMember and not parentMember.private then
+                instance[memberKey] = memberValue
+              end
             end
           end
 
@@ -97,14 +107,14 @@ local class<const> = function (Members, Parent)
       else error("no constructor was provided") end
 
       for memberKey, member in pairs(members) do
-        if not instance[memberKey] and not member.static then
+        if not instance[memberKey] and not member.static and not member.private then
           error(("the `%s` was not instantiated in constructor"):format(memberKey))
         end
       end
 
       if Parent and Parent.__extended then
         for memberKey, member in pairs(Parent.__extended.members) do
-          if not instance[memberKey] and not member.static then
+          if not instance[memberKey] and not member.static and not member.private then
             error(("derived member `%s` was not instantiated"):format(memberKey))
           end
         end
@@ -118,8 +128,14 @@ local class<const> = function (Members, Parent)
           if not member then 
             if getters[memberKey] then
               return getters[memberKey](instance)
-            elseif Parent then
-              return instance[memberKey]
+            elseif Parent and Parent.__extended then
+              local parentMember = Parent.__extended.members[memberKey]
+              if parentMember then
+                if parentMember.private then
+                  error(("`%s` is not a public member"):format(memberKey))
+                end
+                return instance[memberKey]
+              end
             elseif setters[memberKey] then
               error(("`%s` setter can not be accessed"):format(memberKey))
             end
@@ -183,7 +199,7 @@ local class<const> = function (Members, Parent)
       local value<const> = membersValues[memberKey]
 
       if type(value) == "function" then
-        return function(_, ...)
+        return function(...)
           return value(membersValues, ...)
         end
       end
@@ -212,11 +228,16 @@ local class<const> = function (Members, Parent)
   })
 end
 
+local private, static, immutable, virtual, override = true, true, true, true, true
+-- Parent marks method as virtual (overridable)
+local Parent = class({
+  greet = {function(self) return "Hello from parent" end, nil, nil, nil, virtual},
+  --       [1]=value, [2]=private, [3]=static, [4]=immutable, [5]=virtual, [6]=override
+  constructor = function(self) end
+})
 
-
-
-
---virtual
-
-
-
+-- Child must explicitly override
+local Child = class({
+  greet = {function(self) return "Hello from child" end, nil, nil, nil, nil, override},
+  constructor = function(self, super) super() end
+}, Parent)
