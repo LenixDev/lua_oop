@@ -1,6 +1,6 @@
 assert(_VERSION == "Lua 5.4", "THIS MODULE REQUIRES Lua 5.4")
 
-local class<const> = function (Members)
+local class<const> = function (Members, Parent)
   local members<const> = {}
   local membersValues<const> = {}
   local default<const> = function(existingValue, defaultValue)
@@ -48,6 +48,13 @@ local class<const> = function (Members)
       end
     end
   end
+  
+  -- for parentMemberKey, parentMember in pairs(Parent or {}) do
+  --   if not members[parentMemberKey] then  -- Don't override child's own members
+  --     members[parentKey] = parentMember
+  --     membersValues[parentKey] = parentMembersValues[parentMemberKey]
+  --   end
+  -- end
 
   return setmetatable({
     new = function(self, ...)
@@ -71,11 +78,18 @@ local class<const> = function (Members)
       return setmetatable({}, {
         __metatable = "access denied",
         __index = function(_, memberKey)
-          if getters[memberKey] then
-            return getters[memberKey](instance)
-          end
           local member<const> = members[memberKey]
-          if not member then error(("`%s` does not exist"):format(memberKey)) end
+          if not member then 
+            print(memberKey, 1)
+            if getters[memberKey] then
+              return getters[memberKey](instance)
+            -- elseif Parent and Parent[memberKey] then
+            --   return Parent[memberKey]
+            elseif setters[memberKey] then
+              error(("setters can not be accessed: at `%s`"):format(memberKey))
+            end
+            error(("`%s` does not exist"):format(memberKey))  
+          end
           assert(not member.private, ("`%s` is not a public member"):format(memberKey))
           assert(not member.static, ("`%s` is a static member"):format(memberKey))
 
@@ -92,11 +106,16 @@ local class<const> = function (Members)
           if setters[memberKey] then
             setters[memberKey](instance, memberKeyValue)
             return
+          -- elseif Parent[memberKey] then
+          --   Parent[memberKey] = memberKeyValue
+          --   return
+          elseif getters[memberKey] then
+            error(("getters can not be modified: at `%s`"):format(memberKey))
           end
           local member<const> = members[memberKey]
           if not member then error(("`%s` does not exist"):format(memberKey)) end
           assert(not member.private, ("`%s` is not a public member"):format(memberKey))
-          assert(not member.static, ("`%s` is not a static member"):format(memberKey))
+          assert(not member.static, ("`%s` is a static member"):format(memberKey))
           assert(not member.immutable, ("`%s` is not a mutable member"):format(memberKey))
           instance[memberKey] = memberKeyValue
         end
@@ -105,10 +124,14 @@ local class<const> = function (Members)
   }, {
     __metatable = "access denied",
     __index = function(self, memberKey)
+      print(memberKey, 2)
       local member<const> = members[memberKey]
       if not member then 
         if getters[memberKey] then
           return getters[memberKey](membersValues)
+        elseif Parent then
+          print(memberKey)
+          return Parent[memberKey]
         elseif setters[memberKey] then
           error(("setters can not be accessed: at `%s`"):format(memberKey))
         end
@@ -131,7 +154,10 @@ local class<const> = function (Members)
       if not member then
         if setters[memberKey] then
           setters[memberKey](membersValues, memberKeyValue)
-        return
+          return
+        elseif Parent then
+          Parent[memberKey] = memberKeyValue
+          return
         elseif getters[memberKey] then
           error(("getters can not be modified: at `%s`"):format(memberKey))
         end
@@ -145,51 +171,38 @@ local class<const> = function (Members)
   })
 end
 
-local myClass<const> = class({
-  name = {"Lenix", false, false, false},
-  height = {nil},
-  age = 20,
-  getHeight = {
-    function(self)
-      return self.height
-    end, false
-  },
-  setHeight = {
-    function(self, height)
-      self.height = height
-      return true, "set successful"
-    end, false, true
-  },
-  get = {
-    getName = function(self)
-      return self.name
-    end,
-  },
-  set = {
-    setName = function(self, name)
-      self.name = name
-      return true
-    end
-  },
-  -- accessor = {
-  --   getAge = function(self)
-  --     return self.age
-  --   end,
-  --   setAge = function(self, age)
-  --     self.age = age
-  --     return true
-  --   end
-  -- },
+local parent<const> = class({
+  name = {"Lenix", false, true},
   -- reserved for later uses
   -- override = {},
-  constructor = function(self, super, name, age, height)
+  constructor = function(self, super, name)
     self.name = name
-    self.age = age
-    self.height = height
   end
 })
 
-local Class<const> = myClass:new("Lenix", 20, 197)
-print(Class.getName)
+local child<const> = class({
+  nickname = {nil, false},
+  constructor = function(self, super, nickname)
+    self.nickname = nickname
+  end
+}, parent)
+
+local clp = parent:new("Lenix Parent")
+-- print(clp.name)
+local clc = child:new("Lenix Child")
+
+print(clc.name)
+-- print(clc.nickname)
 
 --virtual
+
+
+
+
+
+
+
+
+
+
+
