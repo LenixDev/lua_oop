@@ -1,4 +1,4 @@
-
+--[[ These are the tests that we have tried to get working with Lua-OOP, if you have any suggestions or improvements, please let us know. ]]
 
 local User = class({
   name = {nil, false},
