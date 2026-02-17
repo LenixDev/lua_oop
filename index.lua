@@ -1,6 +1,6 @@
 assert(_VERSION == "Lua 5.4", "THIS MODULE REQUIRES Lua 5.4")
 
-local class<const> = function (Members, Parent)
+return function (Members, Parent)
   local members<const> = {}
   local membersValues<const> = {}
   local default<const> = function(existingValue, defaultValue)
@@ -36,16 +36,16 @@ local class<const> = function (Members, Parent)
         members[memberKey] = {
           private = default(member[2], true),
           static = default(member[3], false),
-          immutable = default(member[4], false),
-          virtual = default(member[5], false),      -- Add virtual flag
-          override = default(member[6], false),     -- Add override flag
+          final = default(member[4], false),
+          virtual = default(member[5], false),
+          override = default(member[6], true),
         }
       else
         membersValues[memberKey] = member
         members[memberKey] = {
           private = true,
           static = false,
-          immutable = true,
+          final = true,
           virtual = false,
           override = false,
         }
@@ -53,37 +53,32 @@ local class<const> = function (Members, Parent)
     end
   end
 
-  -- Validate overrides BEFORE inheriting parent members
   for memberKey, member in pairs(members) do
     if member.override then
       if not Parent or not Parent.__extended then
-        error(("cannot override `%s`: no parent class"):format(memberKey))
+        error(("cannot override `%s`: no parent class was derived"):format(memberKey))
       end
-      
+
       local parentMember = Parent.__extended.members[memberKey]
       if not parentMember then
-        error(("cannot override `%s`: parent doesn't have this method"):format(memberKey))
+        error(("override failed: no such `%s` parent method"):format(memberKey))
       end
-      
+
       if not parentMember.virtual then
-        error(("cannot override `%s`: parent method is not virtual"):format(memberKey))
+        error(("override denied: the parent method `%s` is not virtual"):format(memberKey))
       end
     end
   end
 
-  -- Now inherit parent members
   if Parent and Parent.__extended then
     for memberKey, member in pairs(Parent.__extended.members) do
       if not members[memberKey] then
-        -- Child doesn't define it, inherit from parent
         members[memberKey] = member
         membersValues[memberKey] = Parent.__extended.membersValues[memberKey]
       else
-        -- Child defines it - must have override=true if parent has it
         if not members[memberKey].override then
-          error(("method `%s` already exists in parent, must use override flag"):format(memberKey))
+          error(("method `%s` already exists in parent, did you mean to use the override flag"):format(memberKey))
         end
-        -- Override is valid (already validated above), child's version stays
       end
     end
 
@@ -125,7 +120,8 @@ local class<const> = function (Members, Parent)
           if parentMetatable and parentMetatable.__instance then
             for memberKey, memberValue in pairs(parentMetatable.__instance) do
               local parentMember = Parent.__extended.members[memberKey]
-              if parentMember and not parentMember.private then
+              if members[memberKey] and members[memberKey].override then
+              elseif parentMember and not parentMember.private then
                 instance[memberKey] = memberValue
               end
             end
@@ -204,7 +200,7 @@ local class<const> = function (Members, Parent)
 
           assert(not member.private, ("`%s` is not a public member"):format(memberKey))
           assert(not member.static, ("`%s` is a static member"):format(memberKey))
-          assert(not member.immutable, ("`%s` is not a mutable member"):format(memberKey))
+          assert(not member.final, ("`%s` is a readonly member"):format(memberKey))
 
           instance[memberKey] = memberValue
         end
@@ -252,27 +248,8 @@ local class<const> = function (Members, Parent)
       end
       assert(not member.private, ("`%s` is not a public member"):format(memberKey))
       assert(member.static, ("`%s` is not a static member"):format(memberKey))
-      assert(not member.immutable, ("`%s` is not a mutable member"):format(memberKey))
+      assert(not member.final, ("`%s` is a readonly member"):format(memberKey))
       membersValues[memberKey] = memberValue
     end
   })
 end
-
--- Test
-local private, static, immutable, virtual, override = true, true, true, true, true
-
-local Parent = class({
-  greet = {function(self) return "Hello from parent" end, true, false, false, virtual},
-  constructor = function(self) end
-})
-
-local Child = class({
-  greet = {function(self) return "Hello from child" end, false, false, false, false, override},
-  constructor = function(self, super) super() end
-}, Parent)
-
-local c = Child:new()
-print(c.greet())  -- Should print "Hello from child"
-
-
-
