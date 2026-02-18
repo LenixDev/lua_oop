@@ -289,30 +289,33 @@ end
 
 -- annotation tests section
 class({
-  data1 = 10,
-  data2 = "hello",
-  data3 = true,
-  data4 = function(self) end,
-  data5 = {10},
-  data6 = {"hello"},
-  data7 = {true},
-  data8 = {function(self) end},
-  data9 = {10, true, false, true, false, true},
-  data10 = {"hello", true, false, true, false, true},
-  data11 = {true, true, false, true, false, true},
-  data12 = {function(self) end, true, false, true, false, true},
+  property1 = 10,
+  property4 = {10},
+  property7 = {10, true, false, true, false, true},
+  property2 = "hello",
+  property5 = {"hello"},
+  property8 = {"hello", true, false, true, false, true},
+  property3 = true,
+  property6 = {true},
+  property9 = {true, true, false, true, false, true},
+  property10 = nil, -- SYNTAX ERROR
+  property11 = {nil},
+  property12 = {nil, true, false, true, false, true},
+  method1 = function(self) end,
+  method2 = {function(self) end},
+  method3 = {function(self) end, true, false, true, false, true},
   get = {
-    data1 = function(self)
-      return self.data1 --10
+    getter1 = function(self)
+      return self.property1
     end,
   },
   set = {
-    data1 = function(self, value)
-      self.data1 = value --10
+    setter1 = function(self, value)
+      self.property1 = value
     end,
   },
   constructor = function(self, super, value)
     super(value)
-    self.data1 = value
+    self.property1 = value
   end
 })
