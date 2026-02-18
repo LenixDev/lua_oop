@@ -47,7 +47,7 @@ local class<const> = function (Members, Parent)
       ---@cast member table<string, Getter>
       for getterKey, getter in pairs(member) do
         if type(getter) ~= "function" then error(("syntax error: the getters(`%s`) can be only a `function`, got `%s`"):format(getterKey, type(getter))) end
-        local getterInfo = debug.getinfo(getter, "u")
+        local getterInfo<const> = debug.getinfo(getter, "u")
         if getterInfo.nparams ~= 1 then error(("syntax error: the getters(`%s`) can not have parameters (excluding `self`)"):format(getterKey)) end
         getters[getterKey] = getter
       end
@@ -56,7 +56,7 @@ local class<const> = function (Members, Parent)
       ---@cast member table<string, Setter>
       for setterKey, setter in pairs(member) do
         if type(setter) ~= "function" then error(("syntax error: the setters(`%s`) can be only a `function`, got `%s`"):format(setterKey, type(setter))) end
-        local getterInfo = debug.getinfo(setter, "u")
+        local getterInfo<const> = debug.getinfo(setter, "u")
         if getterInfo.nparams ~= 2 then error(("syntax error: the setters(`%s`) must have exactly one parameter (excluding `self`)"):format(setterKey)) end
         setters[setterKey] = setter
       end
@@ -90,7 +90,7 @@ local class<const> = function (Members, Parent)
         error(("cannot override `%s`: no parent class was derived"):format(memberKey))
       end
 
-      local parentMember = Parent.__extended.members[memberKey]
+      local parentMember<const> = Parent.__extended.members[memberKey]
       if not parentMember then
         error(("override failed: no such `%s` parent method"):format(memberKey))
       end
@@ -151,7 +151,7 @@ local class<const> = function (Members, Parent)
           local parentMetatable<const> = debug.getmetatable(parentInstance)
           if parentMetatable and parentMetatable.__instance then
             for memberKey, memberValue in pairs(parentMetatable.__instance) do
-              local parentMember = Parent.__extended.members[memberKey]
+              local parentMember<const> = Parent.__extended.members[memberKey]
               if members[memberKey] and members[memberKey].override then
               elseif parentMember and not parentMember.private then
                 instance[memberKey] = memberValue
@@ -187,7 +187,7 @@ local class<const> = function (Members, Parent)
             if getters[memberKey] then
               return getters[memberKey](instance)
             elseif Parent and Parent.__extended then
-              local parentMember = Parent.__extended.members[memberKey]
+              local parentMember<const> = Parent.__extended.members[memberKey]
               if parentMember then
                 if parentMember.private then
                   error(("`%s` is not a public member"):format(memberKey))
@@ -288,22 +288,23 @@ end
 
 
 -- annotation tests section
+local private<const>, static<const>, final<const>, virtual<const>, override<const> = true, true, true, true, true
 class({
   property1 = 10,
   property4 = {10},
-  property7 = {10, true, false, true, false, true},
+  property7 = {10, private, false, final, false, override},
   property2 = "hello",
   property5 = {"hello"},
-  property8 = {"hello", true, false, true, false, true},
+  property8 = {"hello", false, static, false, virtual, false},
   property3 = true,
   property6 = {true},
-  property9 = {true, true, false, true, false, true},
+  property9 = {true, private, false, final, false, override},
   property10 = nil, -- SYNTAX ERROR
   property11 = {nil},
-  property12 = {nil, true, false, true, false, true},
+  property12 = {nil, false, static, false, virtual, false},
   method1 = function(self) end,
   method2 = {function(self) end},
-  method3 = {function(self) end, true, false, true, false, true},
+  method3 = {function(self) end, private, false, final, false, override},
   get = {
     getter1 = function(self)
       return self.property1
