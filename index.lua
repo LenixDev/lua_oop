@@ -1,20 +1,50 @@
 assert(_VERSION == "Lua 5.4", "THIS MODULE REQUIRES Lua 5.4")
 
-return function (Members, Parent)
+
+---@alias MemberKey string | "get" | "set" | "constructor"
+---@alias Member ShorthandedMemberValue | MemberEntries | Getter | Setter | Constructor
+---@alias ShorthandedMemberValue number | string | boolean | fun(self: unknown, ...: unknown): unknown?
+---@alias MemberEntries {[1]: MemberValue, [2]?: MemberFlag, [3]?: MemberFlag, [4]?: MemberFlag, [5]?: MemberFlag, [6]?: MemberFlag}
+---@alias MemberValue number | string | boolean | table | nil | fun(self: unknown, ...: unknown): unknown
+---@alias MemberFlag boolean | nil
+---@alias Getter fun(self: unknown): unknown
+---@alias Setter fun(self: unknown, value: unknown): nil
+---@alias Constructor fun(self: unknown, super: fun(...: any): unknown, ...: unknown): unknown
+---@alias Members table<string, PropertyFlags>
+---@alias MembersValues table<string, MemberValue>
+---@alias RawMembers table<MemberKey, Member>
+
+---@class PropertyFlags
+---@field private MemberFlag
+---@field static MemberFlag
+---@field final MemberFlag
+---@field virtual MemberFlag
+---@field override MemberFlag
+
+---@param Members RawMembers
+---@param Parent? unknown
+local class<const> = function (Members, Parent)
+  ---@type Members
   local members<const> = {}
+  ---@type MembersValues
   local membersValues<const> = {}
   local default<const> = function(existingValue, defaultValue)
-    if existingValue ~= nil then return existingValue else return defaultValue end
+    if existingValue ~= nil then
+      return existingValue
+    else return defaultValue end
   end
+  ---@type table<string, Getter>
   local getters<const> = {}
+  ---@type table<string, Setter>
   local setters<const> = {}
 
-  -- initialize
   for memberKey, member in pairs(Members) do
+    assert(member ~= nil, ("syntax error: expected member, got `%s`"):format(type(member)))
     if memberKey == "constructor" then
       if type(member) ~= "function" then error(("syntax error: constructor expected `function`, got `%s`"):format(type(member))) end
     elseif memberKey == "get" then
       if type(member) ~= "table" then error(("syntax error: get expected `table`, got `%s`"):format(type(member))) end
+      ---@cast member table<string, Getter>
       for getterKey, getter in pairs(member) do
         if type(getter) ~= "function" then error(("syntax error: the getters(`%s`) can be only a `function`, got `%s`"):format(getterKey, type(getter))) end
         local getterInfo = debug.getinfo(getter, "u")
@@ -23,6 +53,7 @@ return function (Members, Parent)
       end
     elseif memberKey == "set" then
       if type(member) ~= "table" then error(("syntax error: set expected `table`, got `%s`"):format(type(member))) end
+      ---@cast member table<string, Setter>
       for setterKey, setter in pairs(member) do
         if type(setter) ~= "function" then error(("syntax error: the setters(`%s`) can be only a `function`, got `%s`"):format(setterKey, type(setter))) end
         local getterInfo = debug.getinfo(setter, "u")
@@ -103,6 +134,7 @@ return function (Members, Parent)
       setters = setters
     },
     new = function(self, ...)
+      ---@type MembersValues
       local instance<const> = {}
       for memberKey, member in pairs(members) do
         if not member.static then
@@ -210,7 +242,7 @@ return function (Members, Parent)
     __metatable = "access denied",
     __index = function(self, memberKey)
       local member<const> = members[memberKey]
-      if not member then 
+      if not member then
         if getters[memberKey] then
           return getters[memberKey](membersValues)
         elseif Parent then
@@ -253,3 +285,34 @@ return function (Members, Parent)
     end
   })
 end
+
+
+-- annotation tests section
+class({
+  data1 = 10,
+  data2 = "hello",
+  data3 = true,
+  data4 = function(self) end,
+  data5 = {10},
+  data6 = {"hello"},
+  data7 = {true},
+  data8 = {function(self) end},
+  data9 = {10, true, false, true, false, true},
+  data10 = {"hello", true, false, true, false, true},
+  data11 = {true, true, false, true, false, true},
+  data12 = {function(self) end, true, false, true, false, true},
+  get = {
+    data1 = function(self)
+      return self.data1 --10
+    end,
+  },
+  set = {
+    data1 = function(self, value)
+      self.data1 = value --10
+    end,
+  },
+  constructor = function(self, super, value)
+    super(value)
+    self.data1 = value
+  end
+})
